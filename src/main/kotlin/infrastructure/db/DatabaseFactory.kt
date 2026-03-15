@@ -1,18 +1,15 @@
 package com.vb.infrastructure.db
 
+import io.ktor.server.application.Application
 import org.jetbrains.exposed.sql.Database
 
 object DatabaseFactory {
-    fun init() {
-        val url = System.getenv("DB_URL")
-        val user = System.getenv("DB_USERNAME")
-        val password = System.getenv("DB_PASSWORD")
+    fun init(application: Application) {
+        val config = application.environment.config
 
-        Database.connect(
-            url = url,
-            driver = "org.postgresql.Driver",
-            user = user,
-            password = password
-        )
+        val jdbcUrl = config.property("db.jdbcUrl").getString()
+        val user = config.property("db.user").getString()
+        val password = config.property("db.password").getString()
+        val driverClassName = config.property("db.driverClassName").getString()
     }
 }

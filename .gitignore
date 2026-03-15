@@ -43,3 +43,6 @@ gradle.properties
 
 ### Postgres ###
 postgres-data/
+
+### application ###
+src/main/resources/application.yaml
