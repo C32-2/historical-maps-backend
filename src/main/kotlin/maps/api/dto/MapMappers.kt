@@ -11,5 +11,6 @@ fun Map.toResponseDto(): MapResponseDto {
         previewPath = previewPath,
         createdAt = createdAt.toString(),
         updatedAt = updatedAt.toString(),
+        title = title,
     )
 }

@@ -10,4 +10,5 @@ class MapService(
 ) {
     fun getMapById(id: UUID): Map? = repository.getById(id)
     fun getMapBySlug(slug: String): Map? = repository.getBySlug(slug)
+    fun findByTitle(query: String): List<Map> = repository.findByTitle(query)
 }

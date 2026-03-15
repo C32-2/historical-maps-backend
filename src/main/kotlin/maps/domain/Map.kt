@@ -11,4 +11,5 @@ data class Map(
     val previewPath: String,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val title: String,
 )

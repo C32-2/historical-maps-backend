@@ -2,6 +2,8 @@ package com.vb.maps.data
 
 import com.vb.maps.domain.Map
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.UUID
 
@@ -24,6 +26,13 @@ class MapRepository {
             ?.let(::toDomain)
     }
 
+    fun findByTitle(query: String): List<Map> = transaction {
+        MapTable
+            .selectAll()
+            .where(MapTable.title like "%$query%")
+            .map { toDomain(it) }
+    }
+
     private fun toDomain(row: ResultRow): Map = Map(
         id = row[MapTable.id],
         slug = row[MapTable.slug],
@@ -31,6 +40,7 @@ class MapRepository {
         pmtilesPath = row[MapTable.pmtilesPath],
         previewPath = row[MapTable.previewPath],
         createdAt = row[MapTable.createdAt],
-        updatedAt = row[MapTable.updatedAt]
+        updatedAt = row[MapTable.updatedAt],
+        title = row[MapTable.title],
     )
 }

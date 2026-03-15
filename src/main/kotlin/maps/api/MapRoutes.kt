@@ -14,9 +14,7 @@ fun Route.mapRoutes(
 ) {
     route("/maps") {
         get("/id/{id}") {
-            val rawId = call.parameters["id"]
-                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing id")
-
+            val rawId = call.parameters["id"] ?: error("Route parameter 'id' is required")
             val id = runCatching { UUID.fromString(rawId) }.getOrNull()
                 ?: return@get call.respond(HttpStatusCode.BadRequest, "Invalid UUID")
 
@@ -27,13 +25,21 @@ fun Route.mapRoutes(
         }
 
         get("/slug/{slug}") {
-            val slug = call.parameters["slug"]
-                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing slug")
-
+            val slug = call.parameters["slug"] ?: error("Route parameter 'slug' is required")
             val map = mapService.getMapBySlug(slug)
                 ?: return@get call.respond(HttpStatusCode.NotFound, "Map not found")
 
             call.respond(map.toResponseDto())
+        }
+
+        get {
+            val title = call.request.queryParameters["title"]?.trim()
+                ?.takeIf(String::isNotEmpty)
+                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing title query parameter")
+
+            val maps = mapService.findByTitle(title)
+
+            call.respond(maps.map { it.toResponseDto() })
         }
     }
 }

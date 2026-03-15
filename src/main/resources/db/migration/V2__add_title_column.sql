@@ -1,0 +1,3 @@
+ALTER TABLE map ADD COLUMN title TEXT;
+UPDATE map SET title = slug WHERE title IS NULL;
+ALTER TABLE map ALTER COLUMN title SET NOT NULL;

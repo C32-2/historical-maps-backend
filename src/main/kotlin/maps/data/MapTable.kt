@@ -12,5 +12,7 @@ object MapTable : Table("map") {
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 
+    val title = text("title")
+
     override val primaryKey = PrimaryKey(id)
 }

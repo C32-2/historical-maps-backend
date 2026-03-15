@@ -11,4 +11,5 @@ data class MapResponseDto(
     val previewPath: String,
     val createdAt: String,
     val updatedAt: String,
+    val title: String,
 )
