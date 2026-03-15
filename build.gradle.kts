@@ -2,17 +2,6 @@ plugins {
     kotlin("jvm") version "2.3.0"
     id("io.ktor.plugin") version "3.4.1"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.3.0"
-    id("org.flywaydb.flyway") version "11.14.1"
-}
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath("org.flywaydb:flyway-database-postgresql:11.14.1")
-        classpath("org.postgresql:postgresql:42.7.7")
-    }
 }
 
 group = "com.vb"
@@ -40,6 +29,7 @@ dependencies {
     implementation("io.ktor:ktor-server-request-validation")
     implementation("io.ktor:ktor-server-netty")
     implementation("io.ktor:ktor-server-config-yaml")
+    implementation("ch.qos.logback:logback-classic:1.5.18")
 
     implementation("org.postgresql:postgresql:42.7.7")
     implementation("org.flywaydb:flyway-core:11.14.1")
@@ -51,10 +41,4 @@ dependencies {
 
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:2.3.0")
-}
-
-flyway {
-    url = providers.gradleProperty("flywayUrl").get()
-    user = providers.gradleProperty("flywayUser").get()
-    password = providers.gradleProperty("flywayPassword").get()
 }

@@ -1,15 +1,24 @@
 package com.vb.infrastructure.db
 
-import io.ktor.server.application.Application
+import com.vb.infrastructure.config.DatabaseSettings
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.Database
 
 object DatabaseFactory {
-    fun init(application: Application) {
-        val config = application.environment.config
+    fun init(settings: DatabaseSettings) {
+        Database.connect(
+            url = settings.jdbcUrl,
+            driver = settings.driverClassName,
+            user = settings.user,
+            password = settings.password,
+        )
+    }
 
-        val jdbcUrl = config.property("db.jdbcUrl").getString()
-        val user = config.property("db.user").getString()
-        val password = config.property("db.password").getString()
-        val driverClassName = config.property("db.driverClassName").getString()
+    fun migrate(settings: DatabaseSettings) {
+        Flyway.configure()
+            .dataSource(settings.jdbcUrl, settings.user, settings.password)
+            .locations(*settings.flywayLocations.toTypedArray())
+            .load()
+            .migrate()
     }
 }

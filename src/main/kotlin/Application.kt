@@ -1,19 +1,13 @@
 package com.vb
 
-import com.vb.infrastructure.db.DatabaseFactory
-import com.vb.maps.api.mapRoutes
-import com.vb.maps.application.MapService
-import com.vb.maps.data.MapRepository
+import com.vb.plugins.DatabasePlugin
+import com.vb.plugins.configureRouting
+import com.vb.plugins.configureSerialization
 import io.ktor.server.application.Application
-import io.ktor.server.routing.routing
+import io.ktor.server.application.install
 
 fun Application.module() {
-    DatabaseFactory.init(this)
-
-    val mapRepository = MapRepository()
-    val mapService = MapService(mapRepository)
-
-    routing {
-        mapRoutes(mapService)
-    }
+    configureSerialization()
+    install(DatabasePlugin)
+    configureRouting()
 }
