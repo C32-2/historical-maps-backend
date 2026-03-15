@@ -13,7 +13,7 @@ fun Route.mapRoutes(
     mapService: MapService,
 ) {
     route("/maps") {
-        get("/{id}") {
+        get("/id/{id}") {
             val rawId = call.parameters["id"]
                 ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing id")
 
@@ -21,6 +21,16 @@ fun Route.mapRoutes(
                 ?: return@get call.respond(HttpStatusCode.BadRequest, "Invalid UUID")
 
             val map = mapService.getMapById(id)
+                ?: return@get call.respond(HttpStatusCode.NotFound, "Map not found")
+
+            call.respond(map.toResponseDto())
+        }
+
+        get("/slug/{slug}") {
+            val slug = call.parameters["slug"]
+                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing slug")
+
+            val map = mapService.getMapBySlug(slug)
                 ?: return@get call.respond(HttpStatusCode.NotFound, "Map not found")
 
             call.respond(map.toResponseDto())
