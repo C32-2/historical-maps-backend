@@ -40,3 +40,6 @@ out/
 
 ### properties ###
 gradle.properties
+
+### Postgres ###
+postgres-data/
