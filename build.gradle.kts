@@ -45,6 +45,10 @@ dependencies {
     implementation("org.flywaydb:flyway-core:11.14.1")
     implementation("org.flywaydb:flyway-database-postgresql:11.14.1")
 
+    implementation("org.jetbrains.exposed:exposed-core:0.53.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.53.0")
+    implementation("org.jetbrains.exposed:exposed-java-time:0.53.0")
+
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:2.3.0")
 }
