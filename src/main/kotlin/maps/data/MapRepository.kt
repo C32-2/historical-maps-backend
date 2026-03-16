@@ -2,7 +2,6 @@ package com.vb.maps.data
 
 import com.vb.maps.domain.Map
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.UUID
@@ -37,8 +36,6 @@ class MapRepository {
         id = row[MapTable.id],
         slug = row[MapTable.slug],
         description = row[MapTable.description] ?: "",
-        pmtilesPath = row[MapTable.pmtilesPath],
-        previewPath = row[MapTable.previewPath],
         createdAt = row[MapTable.createdAt],
         updatedAt = row[MapTable.updatedAt],
         title = row[MapTable.title],

@@ -7,8 +7,6 @@ data class Map(
     val id: UUID,
     val slug: String,
     val description: String,
-    val pmtilesPath: String,
-    val previewPath: String,
     val createdAt: Instant,
     val updatedAt: Instant,
     val title: String,

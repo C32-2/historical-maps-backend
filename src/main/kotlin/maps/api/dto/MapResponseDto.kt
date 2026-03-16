@@ -7,8 +7,6 @@ data class MapResponseDto(
     val id: String,
     val slug: String,
     val description: String,
-    val pmtilesPath: String,
-    val previewPath: String,
     val createdAt: String,
     val updatedAt: String,
     val title: String,

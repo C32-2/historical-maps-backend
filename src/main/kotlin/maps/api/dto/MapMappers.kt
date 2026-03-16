@@ -7,8 +7,6 @@ fun Map.toResponseDto(): MapResponseDto {
         id = id.toString(),
         slug = slug,
         description = description,
-        pmtilesPath = pmtilesPath,
-        previewPath = previewPath,
         createdAt = createdAt.toString(),
         updatedAt = updatedAt.toString(),
         title = title,

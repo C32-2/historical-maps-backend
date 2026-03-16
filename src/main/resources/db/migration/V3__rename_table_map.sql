@@ -1,0 +1,1 @@
+ALTER TABLE map RENAME TO map_catalog;
