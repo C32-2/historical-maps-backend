@@ -1,0 +1,9 @@
+.git
+.gradle
+.gradle-user-home
+.idea
+.kotlin
+build
+postgres-data
+README.md
+docs

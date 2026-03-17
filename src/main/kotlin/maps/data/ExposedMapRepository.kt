@@ -1,13 +1,14 @@
 package com.vb.maps.data
 
 import com.vb.maps.domain.Map
+import com.vb.maps.domain.MapRepository
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.UUID
 
-class MapRepository {
-    fun getById(id: UUID): Map? = transaction {
+class ExposedMapRepository : MapRepository {
+    override fun getById(id: UUID): Map? = transaction {
         MapTable
             .selectAll()
             .andWhere { MapTable.id eq id }
@@ -16,7 +17,7 @@ class MapRepository {
             ?.let(::toDomain)
     }
 
-    fun getBySlug(slug: String): Map? = transaction {
+    override fun getBySlug(slug: String): Map? = transaction {
         MapTable
             .selectAll()
             .where { MapTable.slug eq slug }
@@ -25,10 +26,16 @@ class MapRepository {
             ?.let(::toDomain)
     }
 
-    fun findByTitle(query: String): List<Map> = transaction {
+    override fun findByTitle(query: String): List<Map> = transaction {
         MapTable
             .selectAll()
             .where(MapTable.title like "%$query%")
+            .map { toDomain(it) }
+    }
+
+    override fun getAll(): List<Map> = transaction {
+        MapTable
+            .selectAll()
             .map { toDomain(it) }
     }
 

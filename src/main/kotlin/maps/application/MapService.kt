@@ -1,7 +1,7 @@
 package com.vb.maps.application
 
-import com.vb.maps.data.MapRepository
 import com.vb.maps.domain.Map
+import com.vb.maps.domain.MapRepository
 import java.util.UUID
 
 class MapService(
