@@ -2,6 +2,7 @@ package com.vb.maps.api
 
 import com.vb.maps.api.dto.toResponseDto
 import com.vb.maps.application.MapService
+import com.vb.plugins.UploadRateLimiter
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -35,6 +36,11 @@ fun Route.mapRoutes(
         }
 
         post {
+            if (!UploadRateLimiter.isAllowed(call)) {
+                call.respond(HttpStatusCode.TooManyRequests, "Too many upload attempts. Try again later.")
+                return@post
+            }
+
             val parsedRequest = when (val result = createMapMultipartParser.parse(call)) {
                 is CreateMapMultipartParseResult.Failure -> {
                     call.respond(result.status, result.message)
@@ -44,8 +50,12 @@ fun Route.mapRoutes(
                 is CreateMapMultipartParseResult.Success -> result.value
             }
 
-            val map = mapService.saveMap(parsedRequest.request, parsedRequest.fileContent)
-            call.respond(HttpStatusCode.Created, map.toResponseDto())
+            try {
+                val map = mapService.saveMap(parsedRequest.request, parsedRequest.openFileContent())
+                call.respond(HttpStatusCode.Created, map.toResponseDto())
+            } finally {
+                parsedRequest.cleanup()
+            }
         }
 
         get {

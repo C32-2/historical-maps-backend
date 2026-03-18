@@ -4,6 +4,7 @@ import com.vb.module
 import com.vb.maps.application.MapStorage
 import com.vb.maps.domain.Map
 import com.vb.maps.domain.MapRepository
+import com.vb.plugins.resetUploadRateLimitBucketsForTests
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.forms.submitFormWithBinaryData
@@ -15,6 +16,9 @@ import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.testing.testApplication
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toInputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -22,6 +26,14 @@ import java.time.Instant
 import java.util.UUID
 
 class MapRoutesTest {
+
+    @BeforeTest
+    fun resetState() {
+        resetUploadRateLimitBucketsForTests()
+        storedMaps.clear()
+        storedMaps.add(testMap)
+        savedFiles.clear()
+    }
 
     private val testMap = Map(
         id = UUID.fromString("11111111-1111-1111-1111-111111111111"),
@@ -57,6 +69,8 @@ class MapRoutesTest {
             savedFiles[storageKey] = fileContent.toInputStream().use { it.readAllBytes() }
             return storageKey
         }
+
+        override fun delete(storageKey: String) = Unit
     }
 
     @Test
@@ -106,10 +120,6 @@ class MapRoutesTest {
 
     @Test
     fun createsMapAndStoresPmtilesByUuidKey() = testApplication {
-        storedMaps.clear()
-        storedMaps.add(testMap)
-        savedFiles.clear()
-
         environment {
             config = MapApplicationConfig(
                 "db.enabled" to "false",
@@ -134,7 +144,7 @@ class MapRoutesTest {
                 append("description", "Uploaded map")
                 append(
                     key = "pmtiles",
-                    value = "pmtiles-content".toByteArray(),
+                    value = validPmtilesBytes(),
                     headers = Headers.build {
                         append("Content-Disposition", "filename=\"tiles.pmtiles\"")
                         append("Content-Type", ContentType.Application.OctetStream.toString())
@@ -145,12 +155,166 @@ class MapRoutesTest {
             assertEquals(HttpStatusCode.Created, status)
             val responseBody = body<String>()
             assertNotNull(responseBody.takeIf { it.contains("\"slug\":\"new-map\"") })
-            assertNotNull(responseBody.takeIf { it.contains("\"storageKey\":\"maps/") })
             assertEquals(2, storedMaps.size)
             assertEquals(1, savedFiles.size)
             val storedKey = savedFiles.keys.single()
             assertNotNull(Regex("""^maps/[0-9a-f\-]{36}/tiles\.pmtiles$""").matchEntire(storedKey))
-            assertEquals("pmtiles-content", savedFiles[storedKey]?.decodeToString())
+            assertEquals(validPmtilesBytes().toList(), savedFiles[storedKey]?.toList())
         }
     }
+
+    @Test
+    fun rejectsFileWithPmtilesExtensionButInvalidContent() = testApplication {
+        environment {
+            config = MapApplicationConfig(
+                "db.enabled" to "false",
+                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
+                "db.user" to "test",
+                "db.password" to "test",
+                "db.driverClassName" to "org.postgresql.Driver",
+                "db.flyway.enabled" to "false",
+                "storage.baseDir" to "build/test-storage",
+            )
+        }
+
+        application {
+            module(fakeRepository, fakeStorage)
+        }
+
+        client.submitFormWithBinaryData(
+            url = "/maps",
+            formData = formData {
+                append("slug", "new-map")
+                append("title", "New map")
+                append(
+                    key = "pmtiles",
+                    value = "not-a-real-pmtiles".toByteArray(),
+                    headers = Headers.build {
+                        append("Content-Disposition", "filename=\"tiles.pmtiles\"")
+                        append("Content-Type", ContentType.Application.OctetStream.toString())
+                    }
+                )
+            }
+        ).apply {
+            assertEquals(HttpStatusCode.BadRequest, status)
+            assertEquals("Uploaded file is not a valid PMTiles archive", body<String>())
+            assertEquals(1, storedMaps.size)
+            assertEquals(0, savedFiles.size)
+        }
+    }
+
+    @Test
+    fun rejectsRequestWithMultiplePmtilesFiles() = testApplication {
+        environment {
+            config = MapApplicationConfig(
+                "db.enabled" to "false",
+                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
+                "db.user" to "test",
+                "db.password" to "test",
+                "db.driverClassName" to "org.postgresql.Driver",
+                "db.flyway.enabled" to "false",
+                "storage.baseDir" to "build/test-storage",
+            )
+        }
+
+        application {
+            module(fakeRepository, fakeStorage)
+        }
+
+        client.submitFormWithBinaryData(
+            url = "/maps",
+            formData = formData {
+                append("slug", "new-map")
+                append("title", "New map")
+                append(
+                    key = "pmtiles",
+                    value = validPmtilesBytes(),
+                    headers = Headers.build {
+                        append("Content-Disposition", "filename=\"tiles.pmtiles\"")
+                        append("Content-Type", ContentType.Application.OctetStream.toString())
+                    }
+                )
+                append(
+                    key = "file",
+                    value = validPmtilesBytes(),
+                    headers = Headers.build {
+                        append("Content-Disposition", "filename=\"tiles.pmtiles\"")
+                        append("Content-Type", ContentType.Application.OctetStream.toString())
+                    }
+                )
+            }
+        ).apply {
+            assertEquals(HttpStatusCode.BadRequest, status)
+            assertEquals("Exactly one pmtiles file must be uploaded", body<String>())
+            assertEquals(1, storedMaps.size)
+            assertEquals(0, savedFiles.size)
+        }
+    }
+
+    @Test
+    fun rateLimitsRepeatedUploadsFromSameClientIp() = testApplication {
+        environment {
+            config = MapApplicationConfig(
+                "db.enabled" to "false",
+                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
+                "db.user" to "test",
+                "db.password" to "test",
+                "db.driverClassName" to "org.postgresql.Driver",
+                "db.flyway.enabled" to "false",
+                "storage.baseDir" to "build/test-storage",
+            )
+        }
+
+        application {
+            module(fakeRepository, fakeStorage)
+        }
+
+        repeat(5) { index ->
+            client.submitFormWithBinaryData(
+                url = "/maps",
+                formData = createValidUploadFormData("new-map-$index", "New map $index"),
+                block = {
+                    headers.append("X-Forwarded-For", "203.0.113.10")
+                }
+            ).apply {
+                assertEquals(HttpStatusCode.Created, status)
+            }
+        }
+
+        client.submitFormWithBinaryData(
+            url = "/maps",
+            formData = createValidUploadFormData("new-map-over-limit", "New map over limit"),
+            block = {
+                headers.append("X-Forwarded-For", "203.0.113.10")
+            }
+        ).apply {
+            assertEquals(HttpStatusCode.TooManyRequests, status)
+            assertEquals("Too many upload attempts. Try again later.", body<String>())
+        }
+    }
+}
+
+private fun createValidUploadFormData(slug: String, title: String) = formData {
+    append("slug", slug)
+    append("title", title)
+    append("description", "Uploaded map")
+    append(
+        key = "pmtiles",
+        value = validPmtilesBytes(),
+        headers = Headers.build {
+            append("Content-Disposition", "filename=\"tiles.pmtiles\"")
+            append("Content-Type", ContentType.Application.OctetStream.toString())
+        }
+    )
+}
+
+private fun validPmtilesBytes(): ByteArray {
+    val bytes = ByteArray(127)
+    val magic = "PMTiles".encodeToByteArray()
+    magic.copyInto(bytes, destinationOffset = 0)
+    bytes[7] = 3
+    ByteBuffer.wrap(bytes, 8, Long.SIZE_BYTES)
+        .order(ByteOrder.LITTLE_ENDIAN)
+        .putLong(127L)
+    return bytes
 }

@@ -51,6 +51,7 @@ class MapServiceTest {
 
     private val storage = object : MapStorage {
         override suspend fun save(storageKey: String, fileContent: ByteReadChannel): String = storageKey
+        override fun delete(storageKey: String) = Unit
     }
 
     private val service = MapService(repository, storage)
@@ -77,9 +78,8 @@ class MapServiceTest {
     }
 
     @Test
-    fun deletesDatabaseRecordWhenStorageFails() {
-        val addedMaps = mutableListOf<Map>()
-        val deletedIds = mutableListOf<UUID>()
+    fun deletesStoredFileWhenRepositorySaveFails() {
+        val deletedStorageKeys = mutableListOf<String>()
 
         val repository = object : MapRepository {
             override fun getById(id: UUID): Map? = null
@@ -87,18 +87,15 @@ class MapServiceTest {
             override fun findByTitle(query: String): List<Map> = emptyList()
             override fun getAll(): List<Map> = emptyList()
             override fun addMap(map: Map) {
-                addedMaps.add(map)
+                throw IllegalStateException("database failed")
             }
 
-            override fun deleteById(id: UUID) {
-                deletedIds.add(id)
-            }
+            override fun deleteById(id: UUID) = Unit
         }
 
         val storage = object : MapStorage {
-            override suspend fun save(storageKey: String, fileContent: ByteReadChannel): String {
-                throw IllegalStateException("storage failed")
-            }
+            override suspend fun save(storageKey: String, fileContent: ByteReadChannel): String = storageKey
+            override fun delete(storageKey: String) { deletedStorageKeys.add(storageKey) }
         }
 
         val service = MapService(repository, storage)
@@ -116,7 +113,6 @@ class MapServiceTest {
             }
         }
 
-        assertEquals(1, addedMaps.size)
-        assertEquals(listOf(addedMaps.single().id), deletedIds)
+        assertEquals(1, deletedStorageKeys.size)
     }
 }
