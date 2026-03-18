@@ -12,7 +12,7 @@ data class DatabaseSettings(
     val flywayLocations: List<String>,
 )
 
-private fun ApplicationConfig.stringSetting(path: String, envName: String? = null, default: String? = null): String {
+internal fun ApplicationConfig.stringSetting(path: String, envName: String? = null, default: String? = null): String {
     val envValue = envName?.let(System::getenv)?.takeIf(String::isNotBlank)
     val configuredValue = propertyOrNull(path)?.getString()?.takeIf(String::isNotBlank)
 
@@ -20,7 +20,7 @@ private fun ApplicationConfig.stringSetting(path: String, envName: String? = nul
     ?: error("Missing required setting '$path'")
 }
 
-private fun ApplicationConfig.booleanSetting(path: String, envName: String? = null, default: Boolean): Boolean {
+internal fun ApplicationConfig.booleanSetting(path: String, envName: String? = null, default: Boolean): Boolean {
     val envValue = envName?.let(System::getenv)?.toBooleanStrictOrNull()
     val configuredValue = propertyOrNull(path)?.getString()?.toBooleanStrictOrNull()
 

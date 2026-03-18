@@ -48,3 +48,6 @@ gradle.properties
 postgres-data/
 
 ### application ###
+
+### Maps ###
+data/

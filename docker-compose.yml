@@ -30,5 +30,8 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_DRIVER_CLASS_NAME: ${DB_DRIVER_CLASS_NAME}
       DB_FLYWAY_ENABLED: ${DB_FLYWAY_ENABLED}
+      BASE_MAP_DIRECTORY: ${BASE_MAP_DIRECTORY}
     ports:
       - "8080:8080"
+    volumes:
+      - ./data:/app/data

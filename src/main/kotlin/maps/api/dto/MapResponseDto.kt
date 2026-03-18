@@ -6,8 +6,9 @@ import kotlinx.serialization.Serializable
 data class MapResponseDto(
     val id: String,
     val slug: String,
-    val description: String,
+    val description: String?,
     val createdAt: String,
     val updatedAt: String,
     val title: String,
+    val storageKey: String,
 )

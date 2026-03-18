@@ -10,5 +10,6 @@ fun Map.toResponseDto(): MapResponseDto {
         createdAt = createdAt.toString(),
         updatedAt = updatedAt.toString(),
         title = title,
+        storageKey = storageKey,
     )
 }

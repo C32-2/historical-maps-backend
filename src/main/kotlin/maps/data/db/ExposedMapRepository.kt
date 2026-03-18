@@ -1,8 +1,9 @@
-package com.vb.maps.data
+package com.vb.maps.data.db
 
 import com.vb.maps.domain.Map
 import com.vb.maps.domain.MapRepository
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.UUID
@@ -39,6 +40,22 @@ class ExposedMapRepository : MapRepository {
             .map { toDomain(it) }
     }
 
+    override fun addMap(map: Map): Unit = transaction {
+        MapTable.insert {
+            it[id] = map.id
+            it[slug] = map.slug
+            it[description] = map.description
+            it[createdAt] = map.createdAt
+            it[updatedAt] = map.updatedAt
+            it[title] = map.title
+            it[storageKey] = map.storageKey
+        }
+    }
+
+    override fun deleteById(id: UUID): Unit = transaction {
+        MapTable.deleteWhere { MapTable.id eq id }
+    }
+
     private fun toDomain(row: ResultRow): Map = Map(
         id = row[MapTable.id],
         slug = row[MapTable.slug],
@@ -46,5 +63,6 @@ class ExposedMapRepository : MapRepository {
         createdAt = row[MapTable.createdAt],
         updatedAt = row[MapTable.updatedAt],
         title = row[MapTable.title],
+        storageKey = row[MapTable.storageKey]
     )
 }

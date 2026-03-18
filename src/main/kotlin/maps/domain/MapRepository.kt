@@ -7,4 +7,6 @@ interface MapRepository {
     fun getBySlug(slug: String): Map?
     fun findByTitle(query: String): List<Map>
     fun getAll(): List<Map>
+    fun addMap(map: Map)
+    fun deleteById(id: UUID)
 }

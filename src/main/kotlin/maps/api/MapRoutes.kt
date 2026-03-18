@@ -5,32 +5,25 @@ import com.vb.maps.application.MapService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
-import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.util.UUID
 
 fun Route.mapRoutes(
     mapService: MapService,
+    createMapMultipartParser: CreateMapMultipartParser = CreateMapMultipartParser(),
 ) {
     route("/maps") {
-        suspend fun RoutingContext.handleGetById(rawId: String?) {
-            val value = rawId ?: error("Route parameter 'id' is required")
-            val id = runCatching { UUID.fromString(value) }.getOrNull()
-                ?: return call.respond(HttpStatusCode.BadRequest, "Invalid UUID")
+        get("/{id}") {
+            val rawId = call.parameters["id"] ?: error("Route parameter 'id' is required")
+            val id = runCatching { UUID.fromString(rawId) }.getOrNull()
+                ?: return@get call.respond(HttpStatusCode.BadRequest, "Invalid UUID")
 
             val map = mapService.getMapById(id)
-                ?: return call.respond(HttpStatusCode.NotFound, "Map not found")
+                ?: return@get call.respond(HttpStatusCode.NotFound, "Map not found")
 
             call.respond(map.toResponseDto())
-        }
-
-        get("/{id}") {
-            handleGetById(call.parameters["id"])
-        }
-
-        get("/id/{id}") {
-            handleGetById(call.parameters["id"])
         }
 
         get("/slug/{slug}") {
@@ -39,6 +32,20 @@ fun Route.mapRoutes(
                 ?: return@get call.respond(HttpStatusCode.NotFound, "Map not found")
 
             call.respond(map.toResponseDto())
+        }
+
+        post {
+            val parsedRequest = when (val result = createMapMultipartParser.parse(call)) {
+                is CreateMapMultipartParseResult.Failure -> {
+                    call.respond(result.status, result.message)
+                    return@post
+                }
+
+                is CreateMapMultipartParseResult.Success -> result.value
+            }
+
+            val map = mapService.saveMap(parsedRequest.request, parsedRequest.fileContent)
+            call.respond(HttpStatusCode.Created, map.toResponseDto())
         }
 
         get {
