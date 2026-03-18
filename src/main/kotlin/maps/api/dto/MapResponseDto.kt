@@ -10,5 +10,4 @@ data class MapResponseDto(
     val createdAt: String,
     val updatedAt: String,
     val title: String,
-    val storageKey: String,
 )
