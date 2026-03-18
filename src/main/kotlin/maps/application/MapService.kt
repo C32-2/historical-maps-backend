@@ -4,8 +4,8 @@ import com.vb.maps.api.dto.CreateMapRequest
 import com.vb.maps.domain.Map
 import com.vb.maps.domain.MapRepository
 import io.ktor.utils.io.ByteReadChannel
-import java.util.UUID
 import java.time.Instant
+import java.util.UUID
 
 class MapService(
     private val repository: MapRepository,
@@ -16,15 +16,16 @@ class MapService(
     fun findByTitle(query: String): List<Map> = repository.findByTitle(query)
 
     suspend fun saveMap(mapDto: CreateMapRequest, fileContent: ByteReadChannel): Map {
-        val map = createMap(mapDto)
-
-        repository.addMap(map)
+        val draftMap = createMap(mapDto)
+        var persistedStorageKey: String? = null
 
         return try {
-            val persistedStorageKey = storage.save(map.storageKey, fileContent)
-            map.copy(storageKey = persistedStorageKey)
+            persistedStorageKey = storage.save(draftMap.storageKey, fileContent)
+            val persistedMap = draftMap.copy(storageKey = persistedStorageKey)
+            repository.addMap(persistedMap)
+            persistedMap
         } catch (exception: Exception) {
-            repository.deleteById(map.id)
+            storage.delete(persistedStorageKey ?: draftMap.storageKey)
             throw exception
         }
     }
