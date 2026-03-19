@@ -1,0 +1,246 @@
+openapi: 3.1.0
+info:
+  title: Historical Maps Backend API
+  version: 0.0.1
+  description: API for managing historical map metadata and PMTiles uploads.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Maps
+    description: Historical maps catalog
+
+paths:
+  /maps:
+    get:
+      tags:
+        - Maps
+      summary: Search maps by title
+      operationId: searchMapsByTitle
+      parameters:
+        - name: title
+          in: query
+          required: true
+          description: Non-empty title substring
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Matching maps
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MapResponse"
+        "400":
+          description: Missing title query parameter
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Missing title query parameter
+    post:
+      tags:
+        - Maps
+      summary: Create a map and upload a PMTiles archive
+      operationId: createMap
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateMapMultipartRequest"
+            encoding:
+              pmtiles:
+                contentType: application/octet-stream
+      responses:
+        "201":
+          description: Created map
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapResponse"
+        "400":
+          description: Validation error
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                missingFields:
+                  value: Missing slug or title
+                duplicateFields:
+                  value: Duplicate multipart fields are not allowed
+                fileCount:
+                  value: Exactly one pmtiles file must be uploaded
+                invalidSlug:
+                  value: Slug may contain only lowercase letters, digits, and hyphens
+                fieldLength:
+                  value: One or more fields exceed the allowed length
+                invalidExtension:
+                  value: Uploaded file must be a .pmtiles file
+                missingFile:
+                  value: Missing pmtiles file
+                invalidArchive:
+                  value: Uploaded file is not a valid PMTiles archive
+        "413":
+          description: Upload is too large
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Uploaded file is too large. Maximum allowed size is 100 MB.
+        "429":
+          description: Upload rate limit exceeded
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Too many upload attempts. Try again later.
+
+  /maps/{id}:
+    get:
+      tags:
+        - Maps
+      summary: Get a map by UUID
+      operationId: getMapById
+      parameters:
+        - $ref: "#/components/parameters/MapId"
+      responses:
+        "200":
+          description: Map found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapResponse"
+        "400":
+          $ref: "#/components/responses/InvalidUuid"
+        "404":
+          $ref: "#/components/responses/MapNotFound"
+    delete:
+      tags:
+        - Maps
+      summary: Delete a map by UUID
+      operationId: deleteMap
+      parameters:
+        - $ref: "#/components/parameters/MapId"
+      responses:
+        "204":
+          description: Map deleted
+        "400":
+          $ref: "#/components/responses/InvalidUuid"
+        "404":
+          $ref: "#/components/responses/MapNotFound"
+
+  /maps/slug/{slug}:
+    get:
+      tags:
+        - Maps
+      summary: Get a map by slug
+      operationId: getMapBySlug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: Map slug
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Map found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapResponse"
+        "404":
+          $ref: "#/components/responses/MapNotFound"
+
+components:
+  parameters:
+    MapId:
+      name: id
+      in: path
+      required: true
+      description: Map UUID
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    InvalidUuid:
+      description: Invalid UUID format
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Invalid UUID
+    MapNotFound:
+      description: Map was not found
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: Map not found
+
+  schemas:
+    MapResponse:
+      type: object
+      required:
+        - id
+        - slug
+        - createdAt
+        - updatedAt
+        - title
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+          example: test-map
+        description:
+          type:
+            - string
+            - "null"
+          example: Historical city map
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-01T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-01-02T10:00:00Z"
+        title:
+          type: string
+          example: Test map
+
+    CreateMapMultipartRequest:
+      type: object
+      required:
+        - slug
+        - title
+        - pmtiles
+      properties:
+        slug:
+          type: string
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          maxLength: 60
+          example: test-map
+        title:
+          type: string
+          maxLength: 100
+          example: Test map
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 250
+          example: Uploaded map
+        pmtiles:
+          type: string
+          format: binary
