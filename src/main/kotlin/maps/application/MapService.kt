@@ -43,4 +43,22 @@ class MapService(
             storageKey = "maps/$id/tiles.pmtiles"
         )
     }
+
+    fun removeMap(id: UUID): Boolean {
+        val map = repository.getById(id) ?: return false
+
+        repository.deleteById(id)
+
+        try {
+            storage.delete(map.storageKey)
+        } catch (exception: Exception) {
+            runCatching { repository.addMap(map) }
+                .getOrElse { rollbackException ->
+                    exception.addSuppressed(rollbackException)
+                }
+            throw exception
+        }
+
+        return true
+    }
 }

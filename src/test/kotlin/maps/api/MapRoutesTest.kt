@@ -6,6 +6,7 @@ import com.vb.maps.domain.Map
 import com.vb.maps.domain.MapRepository
 import com.vb.plugins.resetUploadRateLimitBucketsForTests
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.http.ContentType
@@ -33,6 +34,7 @@ class MapRoutesTest {
         storedMaps.clear()
         storedMaps.add(testMap)
         savedFiles.clear()
+        deletedStorageKeys.clear()
     }
 
     private val testMap = Map(
@@ -63,6 +65,7 @@ class MapRoutesTest {
     }
 
     private val savedFiles = mutableMapOf<String, ByteArray>()
+    private val deletedStorageKeys = mutableListOf<String>()
 
     private val fakeStorage = object : MapStorage {
         override suspend fun save(storageKey: String, fileContent: ByteReadChannel): String {
@@ -70,7 +73,9 @@ class MapRoutesTest {
             return storageKey
         }
 
-        override fun delete(storageKey: String) = Unit
+        override fun delete(storageKey: String) {
+            deletedStorageKeys.add(storageKey)
+        }
     }
 
     @Test
@@ -115,6 +120,55 @@ class MapRoutesTest {
         client.get("/maps/slug/test-map").apply {
             assertEquals(HttpStatusCode.OK, status)
             assertNotNull(body<String>().takeIf { it.contains("test-map") })
+        }
+    }
+
+    @Test
+    fun deletesMapById() = testApplication {
+        environment {
+            config = MapApplicationConfig(
+                "db.enabled" to "false",
+                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
+                "db.user" to "test",
+                "db.password" to "test",
+                "db.driverClassName" to "org.postgresql.Driver",
+                "db.flyway.enabled" to "false",
+            )
+        }
+
+        application {
+            module(fakeRepository, fakeStorage)
+        }
+
+        client.delete("/maps/${testMap.id}").apply {
+            assertEquals(HttpStatusCode.NoContent, status)
+            assertEquals(emptyList(), storedMaps)
+            assertEquals(listOf(testMap.storageKey), deletedStorageKeys)
+        }
+    }
+
+    @Test
+    fun returnsNotFoundWhenDeletingMissingMap() = testApplication {
+        environment {
+            config = MapApplicationConfig(
+                "db.enabled" to "false",
+                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
+                "db.user" to "test",
+                "db.password" to "test",
+                "db.driverClassName" to "org.postgresql.Driver",
+                "db.flyway.enabled" to "false",
+            )
+        }
+
+        application {
+            module(fakeRepository, fakeStorage)
+        }
+
+        client.delete("/maps/22222222-2222-2222-2222-222222222222").apply {
+            assertEquals(HttpStatusCode.NotFound, status)
+            assertEquals("Map not found", body<String>())
+            assertEquals(listOf(testMap), storedMaps)
+            assertEquals(emptyList<String>(), deletedStorageKeys)
         }
     }
 

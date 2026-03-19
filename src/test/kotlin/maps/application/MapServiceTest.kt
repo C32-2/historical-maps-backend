@@ -5,6 +5,8 @@ import com.vb.maps.domain.MapRepository
 import io.ktor.utils.io.ByteReadChannel
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.test.assertNull
 import kotlin.test.assertFailsWith
 import java.time.Instant
@@ -114,5 +116,81 @@ class MapServiceTest {
         }
 
         assertEquals(1, deletedStorageKeys.size)
+    }
+
+    @Test
+    fun removesMapAndStoredFile() {
+        val deletedIds = mutableListOf<UUID>()
+        val deletedStorageKeys = mutableListOf<String>()
+
+        val repository = object : MapRepository {
+            override fun getById(id: UUID): Map? = firstMap.takeIf { it.id == id }
+            override fun getBySlug(slug: String): Map? = null
+            override fun findByTitle(query: String): List<Map> = emptyList()
+            override fun getAll(): List<Map> = emptyList()
+            override fun addMap(map: Map) = Unit
+            override fun deleteById(id: UUID) {
+                deletedIds.add(id)
+            }
+        }
+
+        val storage = object : MapStorage {
+            override suspend fun save(storageKey: String, fileContent: ByteReadChannel): String = storageKey
+            override fun delete(storageKey: String) {
+                deletedStorageKeys.add(storageKey)
+            }
+        }
+
+        val service = MapService(repository, storage)
+
+        val removed = service.removeMap(firstMap.id)
+
+        assertTrue(removed)
+        assertEquals(listOf(firstMap.id), deletedIds)
+        assertEquals(listOf(firstMap.storageKey), deletedStorageKeys)
+    }
+
+    @Test
+    fun returnsFalseWhenDeletingMissingMap() {
+        val service = MapService(repository, storage)
+
+        val removed = service.removeMap(UUID.fromString("33333333-3333-3333-3333-333333333333"))
+
+        assertFalse(removed)
+    }
+
+    @Test
+    fun restoresRepositoryRecordWhenStorageDeletionFails() {
+        val deletedIds = mutableListOf<UUID>()
+        val restoredMaps = mutableListOf<Map>()
+
+        val repository = object : MapRepository {
+            override fun getById(id: UUID): Map? = firstMap.takeIf { it.id == id }
+            override fun getBySlug(slug: String): Map? = null
+            override fun findByTitle(query: String): List<Map> = emptyList()
+            override fun getAll(): List<Map> = emptyList()
+            override fun addMap(map: Map) {
+                restoredMaps.add(map)
+            }
+            override fun deleteById(id: UUID) {
+                deletedIds.add(id)
+            }
+        }
+
+        val storage = object : MapStorage {
+            override suspend fun save(storageKey: String, fileContent: ByteReadChannel): String = storageKey
+            override fun delete(storageKey: String) {
+                throw IllegalStateException("storage failed")
+            }
+        }
+
+        val service = MapService(repository, storage)
+
+        assertFailsWith<IllegalStateException> {
+            service.removeMap(firstMap.id)
+        }
+
+        assertEquals(listOf(firstMap.id), deletedIds)
+        assertEquals(listOf(firstMap), restoredMaps)
     }
 }

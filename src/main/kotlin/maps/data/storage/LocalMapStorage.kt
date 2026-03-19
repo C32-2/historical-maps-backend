@@ -5,6 +5,7 @@ import io.ktor.util.cio.writeChannel
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.copyAndClose
 import java.io.File
+import java.nio.file.Files
 
 class LocalMapStorage(
     private val baseDir: File
@@ -38,6 +39,38 @@ class LocalMapStorage(
         val storagePath = java.nio.file.Paths.get(normalizedStorageKey).normalize()
         require(!storagePath.startsWith("..")) { "storageKey must stay within baseDir" }
 
-        File(baseDir, storagePath.toString()).delete()
+        val targetFile = File(baseDir, storagePath.toString())
+        if (!targetFile.exists()) {
+            return
+        }
+
+        if (!targetFile.delete()) {
+            throw kotlinx.io.IOException("Failed to delete file: ${targetFile.absolutePath}")
+        }
+
+        deleteEmptyParentDirectories(targetFile.parentFile)
+    }
+
+    private fun deleteEmptyParentDirectories(directory: File?) {
+        var current = directory ?: return
+        val normalizedBaseDir = baseDir.toPath().toAbsolutePath().normalize()
+
+        while (current.exists()) {
+            val currentPath = current.toPath().toAbsolutePath().normalize()
+            if (currentPath == normalizedBaseDir || !currentPath.startsWith(normalizedBaseDir)) {
+                return
+            }
+
+            val isEmpty = Files.list(currentPath).use { it.findAny().isEmpty }
+            if (!isEmpty) {
+                return
+            }
+
+            if (!current.delete()) {
+                throw kotlinx.io.IOException("Failed to delete directory: ${current.absolutePath}")
+            }
+
+            current = current.parentFile ?: return
+        }
     }
 }

@@ -5,6 +5,7 @@ import com.vb.maps.application.MapService
 import com.vb.plugins.UploadRateLimiter
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -25,6 +26,19 @@ fun Route.mapRoutes(
                 ?: return@get call.respond(HttpStatusCode.NotFound, "Map not found")
 
             call.respond(map.toResponseDto())
+        }
+
+        delete("/{id}") {
+            val rawId = call.parameters["id"] ?: error("Route parameter 'id' is required")
+            val id = runCatching { UUID.fromString(rawId) }.getOrNull()
+                ?: return@delete call.respond(HttpStatusCode.BadRequest, "Invalid UUID")
+
+            val removed = mapService.removeMap(id)
+            if (!removed) {
+                return@delete call.respond(HttpStatusCode.NotFound, "Map not found")
+            }
+
+            call.respond(HttpStatusCode.NoContent)
         }
 
         get("/slug/{slug}") {
