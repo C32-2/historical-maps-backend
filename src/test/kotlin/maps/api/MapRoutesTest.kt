@@ -28,6 +28,7 @@ import java.time.Instant
 import java.util.UUID
 
 class MapRoutesTest {
+    private val adminToken = "test-admin-token"
     private val uploadRateLimiter = InMemoryUploadRateLimiter()
 
     @BeforeTest
@@ -97,7 +98,9 @@ class MapRoutesTest {
 
     @Test
     fun deletesMapById() = withTestMapsApplication {
-        client.delete("/maps/${testMap.id}").apply {
+        client.delete("/maps/${testMap.id}") {
+            headers.append("X-Admin-Token", adminToken)
+        }.apply {
             assertEquals(HttpStatusCode.NoContent, status)
             assertEquals(emptyList(), storedMaps)
             assertEquals(listOf(testMap.storageKey), deletedStorageKeys)
@@ -106,7 +109,9 @@ class MapRoutesTest {
 
     @Test
     fun returnsNotFoundWhenDeletingMissingMap() = withTestMapsApplication {
-        client.delete("/maps/22222222-2222-2222-2222-222222222222").apply {
+        client.delete("/maps/22222222-2222-2222-2222-222222222222") {
+            headers.append("X-Admin-Token", adminToken)
+        }.apply {
             assertEquals(HttpStatusCode.NotFound, status)
             assertEquals("Map not found", body<String>())
             assertEquals(listOf(testMap), storedMaps)
@@ -130,6 +135,9 @@ class MapRoutesTest {
                         append("Content-Type", ContentType.Application.OctetStream.toString())
                     }
                 )
+            },
+            block = {
+                headers.append("X-Admin-Token", adminToken)
             }
         ).apply {
             assertEquals(HttpStatusCode.Created, status)
@@ -158,6 +166,9 @@ class MapRoutesTest {
                         append("Content-Type", ContentType.Application.OctetStream.toString())
                     }
                 )
+            },
+            block = {
+                headers.append("X-Admin-Token", adminToken)
             }
         ).apply {
             assertEquals(HttpStatusCode.BadRequest, status)
@@ -174,6 +185,7 @@ class MapRoutesTest {
                 url = "/maps",
                 formData = createValidUploadFormData("new-map-$index", "New map $index"),
                 block = {
+                    headers.append("X-Admin-Token", adminToken)
                     headers.append("X-Forwarded-For", "203.0.113.10")
                 }
             ).apply {
@@ -185,11 +197,35 @@ class MapRoutesTest {
             url = "/maps",
             formData = createValidUploadFormData("new-map-over-limit", "New map over limit"),
             block = {
+                headers.append("X-Admin-Token", adminToken)
                 headers.append("X-Forwarded-For", "203.0.113.10")
             }
         ).apply {
             assertEquals(HttpStatusCode.TooManyRequests, status)
             assertEquals("Too many upload attempts. Try again later.", body<String>())
+        }
+    }
+
+    @Test
+    fun rejectsDeleteWithoutAdminToken() = withTestMapsApplication {
+        client.delete("/maps/${testMap.id}").apply {
+            assertEquals(HttpStatusCode.Unauthorized, status)
+            assertEquals("Invalid admin token", body<String>())
+            assertEquals(listOf(testMap), storedMaps)
+            assertEquals(emptyList<String>(), deletedStorageKeys)
+        }
+    }
+
+    @Test
+    fun rejectsCreateWithoutAdminToken() = withTestMapsApplication {
+        client.submitFormWithBinaryData(
+            url = "/maps",
+            formData = createValidUploadFormData("new-map", "New map"),
+        ).apply {
+            assertEquals(HttpStatusCode.Unauthorized, status)
+            assertEquals("Invalid admin token", body<String>())
+            assertEquals(1, storedMaps.size)
+            assertEquals(0, savedFiles.size)
         }
     }
 
@@ -207,7 +243,7 @@ class MapRoutesTest {
         }
 
         application {
-            module(fakeRepository, fakeStorage, uploadRateLimiter)
+            module(fakeRepository, fakeStorage, uploadRateLimiter, adminToken)
         }
 
         test()

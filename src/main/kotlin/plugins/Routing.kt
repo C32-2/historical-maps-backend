@@ -11,12 +11,14 @@ fun Application.configureRouting(
     mapRepository: MapRepository,
     mapStorage: MapStorage,
     uploadRateLimiter: UploadRateLimiter,
+    adminToken: String,
 ) {
     val mapService = MapService(mapRepository, mapStorage)
     routing {
         mapRoutes(
             mapService = mapService,
             uploadRateLimiter = uploadRateLimiter,
+            adminToken = adminToken,
         )
     }
 }

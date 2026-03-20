@@ -24,11 +24,13 @@ private const val MAP_NOT_FOUND_MESSAGE = "Map not found"
 private const val INVALID_UUID_MESSAGE = "Invalid UUID"
 private const val MISSING_TITLE_QUERY_PARAMETER_MESSAGE = "Missing title query parameter"
 private const val TOO_MANY_UPLOAD_ATTEMPTS_MESSAGE = "Too many upload attempts. Try again later."
+private const val INVALID_ADMIN_TOKEN_MESSAGE = "Invalid admin token"
 
 fun Route.mapRoutes(
     mapService: MapService,
     createMapMultipartParser: CreateMapMultipartParser = CreateMapMultipartParser(),
     uploadRateLimiter: UploadRateLimiter,
+    adminToken: String,
 ) {
     route("/maps") {
         get("/{id}") {
@@ -39,6 +41,8 @@ fun Route.mapRoutes(
         }
 
         delete("/{id}") {
+            if (!call.requireAdminToken(adminToken)) return@delete
+
             val id = call.parseUuidParameter("id") ?: return@delete
 
             val removed = mapService.removeMap(id)
@@ -57,6 +61,8 @@ fun Route.mapRoutes(
         }
 
         post {
+            if (!call.requireAdminToken(adminToken)) return@post
+
             if (!uploadRateLimiter.isAllowed(call.clientIpAddress())) {
                 call.respond(HttpStatusCode.TooManyRequests, TOO_MANY_UPLOAD_ATTEMPTS_MESSAGE)
                 return@post
@@ -105,6 +111,15 @@ private suspend fun RoutingCall.parseCreateMapRequest(
 
 private suspend fun RoutingCall.respondMapNotFound() {
     respond(HttpStatusCode.NotFound, MAP_NOT_FOUND_MESSAGE)
+}
+
+private suspend fun ApplicationCall.requireAdminToken(expectedToken: String): Boolean {
+    val actualToken = request.headers["X-Admin-Token"]
+    if (actualToken != expectedToken) {
+        respond(HttpStatusCode.Unauthorized, INVALID_ADMIN_TOKEN_MESSAGE)
+        return false
+    }
+    return true
 }
 
 private fun ApplicationCall.clientIpAddress(): String =

@@ -4,6 +4,7 @@ import com.vb.maps.application.MapStorage
 import com.vb.maps.data.db.ExposedMapRepository
 import com.vb.maps.data.storage.LocalMapStorage
 import com.vb.maps.domain.MapRepository
+import com.vb.infrastructure.config.adminToken
 import com.vb.infrastructure.config.toStorageSettings
 import com.vb.plugins.DatabasePlugin
 import com.vb.plugins.InMemoryUploadRateLimiter
@@ -17,8 +18,9 @@ fun Application.module(
     mapRepository: MapRepository = ExposedMapRepository(),
     mapStorage: MapStorage = LocalMapStorage(environment.config.toStorageSettings().baseDir),
     uploadRateLimiter: UploadRateLimiter = InMemoryUploadRateLimiter(),
+    adminToken: String = environment.config.adminToken(),
 ) {
     configureSerialization()
     install(DatabasePlugin)
-    configureRouting(mapRepository, mapStorage, uploadRateLimiter)
+    configureRouting(mapRepository, mapStorage, uploadRateLimiter, adminToken)
 }
