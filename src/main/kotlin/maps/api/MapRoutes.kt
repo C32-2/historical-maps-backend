@@ -1,8 +1,11 @@
 package com.vb.maps.api
 
 import com.vb.maps.api.dto.toResponseDto
+import com.vb.maps.api.upload.CreateMapMultipartError
 import com.vb.maps.api.upload.CreateMapMultipartParseResult
 import com.vb.maps.api.upload.CreateMapMultipartParser
+import com.vb.maps.api.upload.message
+import com.vb.maps.api.upload.status
 import com.vb.maps.application.MapService
 import com.vb.plugins.UploadRateLimiter
 import io.ktor.http.HttpStatusCode
@@ -16,6 +19,11 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import java.util.UUID
+
+private const val MAP_NOT_FOUND_MESSAGE = "Map not found"
+private const val INVALID_UUID_MESSAGE = "Invalid UUID"
+private const val MISSING_TITLE_QUERY_PARAMETER_MESSAGE = "Missing title query parameter"
+private const val TOO_MANY_UPLOAD_ATTEMPTS_MESSAGE = "Too many upload attempts. Try again later."
 
 fun Route.mapRoutes(
     mapService: MapService,
@@ -42,7 +50,7 @@ fun Route.mapRoutes(
         }
 
         get("/slug/{slug}") {
-            val slug = call.parameters["slug"] ?: error("Route parameter 'slug' is required")
+            val slug = call.requiredParameter("slug") ?: return@get
             val map = mapService.getMapBySlug(slug) ?: return@get call.respondMapNotFound()
 
             call.respond(map.toResponseDto())
@@ -50,7 +58,7 @@ fun Route.mapRoutes(
 
         post {
             if (!uploadRateLimiter.isAllowed(call.clientIpAddress())) {
-                call.respond(HttpStatusCode.TooManyRequests, "Too many upload attempts. Try again later.")
+                call.respond(HttpStatusCode.TooManyRequests, TOO_MANY_UPLOAD_ATTEMPTS_MESSAGE)
                 return@post
             }
 
@@ -67,7 +75,7 @@ fun Route.mapRoutes(
         get {
             val title = call.request.queryParameters["title"]?.trim()
                 ?.takeIf(String::isNotEmpty)
-                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing title query parameter")
+                ?: return@get call.respond(HttpStatusCode.BadRequest, MISSING_TITLE_QUERY_PARAMETER_MESSAGE)
 
             val maps = mapService.findByTitle(title)
 
@@ -77,9 +85,9 @@ fun Route.mapRoutes(
 }
 
 private suspend fun RoutingCall.parseUuidParameter(name: String): UUID? {
-    val rawValue = parameters[name] ?: error("Route parameter '$name' is required")
+    val rawValue = requiredParameter(name) ?: return null
     return runCatching { UUID.fromString(rawValue) }.getOrElse {
-        respond(HttpStatusCode.BadRequest, "Invalid UUID")
+        respond(HttpStatusCode.BadRequest, INVALID_UUID_MESSAGE)
         null
     }
 }
@@ -88,7 +96,7 @@ private suspend fun RoutingCall.parseCreateMapRequest(
     parser: CreateMapMultipartParser,
 ) = when (val result = parser.parse(this)) {
     is CreateMapMultipartParseResult.Failure -> {
-        respond(result.status, result.message)
+        respond(result.error.status, result.error.message)
         null
     }
 
@@ -96,7 +104,7 @@ private suspend fun RoutingCall.parseCreateMapRequest(
 }
 
 private suspend fun RoutingCall.respondMapNotFound() {
-    respond(HttpStatusCode.NotFound, "Map not found")
+    respond(HttpStatusCode.NotFound, MAP_NOT_FOUND_MESSAGE)
 }
 
 private fun ApplicationCall.clientIpAddress(): String =
@@ -105,3 +113,9 @@ private fun ApplicationCall.clientIpAddress(): String =
         ?.trim()
         ?.takeIf(String::isNotBlank)
         ?: request.origin.remoteHost
+
+private suspend fun RoutingCall.requiredParameter(name: String): String? =
+    parameters[name] ?: run {
+        respond(HttpStatusCode.BadRequest, "Missing route parameter '$name'")
+        null
+    }

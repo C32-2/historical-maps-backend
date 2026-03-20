@@ -5,21 +5,21 @@ import com.vb.maps.application.MapStorage
 import com.vb.maps.domain.Map
 import com.vb.maps.domain.MapRepository
 import com.vb.plugins.InMemoryUploadRateLimiter
+import com.vb.maps.support.createValidUploadFormData
+import com.vb.maps.support.validPmtilesBytes
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Headers
-import io.ktor.client.request.forms.formData
 import io.ktor.server.config.MapApplicationConfig
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toInputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -212,33 +212,4 @@ class MapRoutesTest {
 
         test()
     }
-}
-
-private fun createValidUploadFormData(slug: String, title: String) = formData {
-    append("slug", slug)
-    append("title", title)
-    append("description", "Uploaded map")
-    appendPmtilesFile(validPmtilesBytes())
-}
-
-private fun io.ktor.client.request.forms.FormBuilder.appendPmtilesFile(bytes: ByteArray) {
-    append(
-        key = "pmtiles",
-        value = bytes,
-        headers = Headers.build {
-            append("Content-Disposition", "filename=\"tiles.pmtiles\"")
-            append("Content-Type", ContentType.Application.OctetStream.toString())
-        }
-    )
-}
-
-private fun validPmtilesBytes(): ByteArray {
-    val bytes = ByteArray(127)
-    val magic = "PMTiles".encodeToByteArray()
-    magic.copyInto(bytes, destinationOffset = 0)
-    bytes[7] = 3
-    ByteBuffer.wrap(bytes, 8, Long.SIZE_BYTES)
-        .order(ByteOrder.LITTLE_ENDIAN)
-        .putLong(127L)
-    return bytes
 }

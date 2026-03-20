@@ -1,7 +1,6 @@
 package com.vb.maps.api.upload
 
 import com.vb.maps.application.CreateMapCommand
-import io.ktor.http.HttpStatusCode
 import io.ktor.util.cio.readChannel
 import io.ktor.server.routing.RoutingCall
 import io.ktor.utils.io.ByteReadChannel
@@ -17,7 +16,7 @@ data class ParsedCreateMapRequest(
 
 sealed interface CreateMapMultipartParseResult {
     data class Success(val value: ParsedCreateMapRequest) : CreateMapMultipartParseResult
-    data class Failure(val status: HttpStatusCode, val message: String) : CreateMapMultipartParseResult
+    data class Failure(val error: CreateMapMultipartError) : CreateMapMultipartParseResult
 }
 
 class CreateMapMultipartParser {
@@ -36,7 +35,7 @@ class CreateMapMultipartParser {
         } catch (exception: IOException) {
             payload?.cleanup()
             if (exception.message?.contains("Limit of", ignoreCase = true) == true) {
-                failure(HttpStatusCode.PayloadTooLarge, "Uploaded file is too large. Maximum allowed size is 100 MB.")
+                failure(CreateMapMultipartError.PayloadTooLarge)
             } else {
                 throw exception
             }
@@ -47,36 +46,36 @@ class CreateMapMultipartParser {
 private object CreateMapMultipartPayloadValidator {
     fun validate(payload: CreateMapMultipartPayload): CreateMapMultipartParseResult {
         val requestSlug = payload.slug?.takeUnless(String::isBlank)
-            ?: return failure(HttpStatusCode.BadRequest, "Missing slug or title")
+            ?: return failure(CreateMapMultipartError.MissingSlugOrTitle)
         val requestTitle = payload.title?.takeUnless(String::isBlank)
-            ?: return failure(HttpStatusCode.BadRequest, "Missing slug or title")
+            ?: return failure(CreateMapMultipartError.MissingSlugOrTitle)
 
         if (payload.hasDuplicateFields) {
-            return failure(HttpStatusCode.BadRequest, "Duplicate multipart fields are not allowed")
+            return failure(CreateMapMultipartError.DuplicateFields)
         }
 
         if (payload.filePartsCount != 1) {
-            return failure(HttpStatusCode.BadRequest, "Exactly one pmtiles file must be uploaded")
+            return failure(CreateMapMultipartError.InvalidFileCount)
         }
 
         if (!requestSlug.matches(SLUG_PATTERN)) {
-            return failure(HttpStatusCode.BadRequest, "Slug may contain only lowercase letters, digits, and hyphens")
+            return failure(CreateMapMultipartError.InvalidSlug)
         }
 
         if (requestSlug.length > MAX_SLUG_LENGTH || requestTitle.length > MAX_TITLE_LENGTH || (payload.description?.length ?: 0) > MAX_DESCRIPTION_LENGTH) {
-            return failure(HttpStatusCode.BadRequest, "One or more fields exceed the allowed length")
+            return failure(CreateMapMultipartError.FieldTooLong)
         }
 
         if (payload.hasInvalidFile) {
-            return failure(HttpStatusCode.BadRequest, "Uploaded file must be a .pmtiles file")
+            return failure(CreateMapMultipartError.InvalidFileExtension)
         }
 
         val uploadedFile = payload.uploadedFile
-            ?: return failure(HttpStatusCode.BadRequest, "Missing pmtiles file")
+            ?: return failure(CreateMapMultipartError.MissingFile)
 
         if (!PmtilesArchiveValidator.isValid(uploadedFile)) {
             payload.cleanup()
-            return failure(HttpStatusCode.BadRequest, "Uploaded file is not a valid PMTiles archive")
+            return failure(CreateMapMultipartError.InvalidPmtilesArchive)
         }
 
         return CreateMapMultipartParseResult.Success(
@@ -92,5 +91,5 @@ private object CreateMapMultipartPayloadValidator {
     }
 }
 
-private fun failure(status: HttpStatusCode, message: String) =
-    CreateMapMultipartParseResult.Failure(status = status, message = message)
+private fun failure(error: CreateMapMultipartError) =
+    CreateMapMultipartParseResult.Failure(error = error)
