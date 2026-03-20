@@ -1,7 +1,5 @@
-package com.vb.maps.api
+package com.vb.maps.api.upload
 
-import com.vb.maps.api.upload.CreateMapMultipartParseResult
-import com.vb.maps.api.upload.CreateMapMultipartParser
 import io.ktor.client.call.body
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
@@ -20,6 +18,16 @@ import kotlin.test.assertEquals
 
 class CreateMapMultipartParserTest {
     private val parser = CreateMapMultipartParser()
+
+    @Test
+    fun parsesValidMultipartRequest() = withParserTestApplication {
+        client.submitFormWithBinaryData(
+            url = "/parse",
+            formData = createValidUploadFormData("new-map", "New map"),
+        ).apply {
+            assertEquals("OK:new-map:New map", body<String>())
+        }
+    }
 
     @Test
     fun rejectsRequestWithMultiplePmtilesFiles() = withParserTestApplication {

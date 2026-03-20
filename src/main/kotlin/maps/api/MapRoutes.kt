@@ -1,12 +1,15 @@
 package com.vb.maps.api
 
 import com.vb.maps.api.dto.toResponseDto
+import com.vb.maps.api.upload.CreateMapMultipartParseResult
+import com.vb.maps.api.upload.CreateMapMultipartParser
 import com.vb.maps.application.MapService
 import com.vb.plugins.UploadRateLimiter
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.RoutingCall
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
@@ -18,24 +21,18 @@ fun Route.mapRoutes(
 ) {
     route("/maps") {
         get("/{id}") {
-            val rawId = call.parameters["id"] ?: error("Route parameter 'id' is required")
-            val id = runCatching { UUID.fromString(rawId) }.getOrNull()
-                ?: return@get call.respond(HttpStatusCode.BadRequest, "Invalid UUID")
-
-            val map = mapService.getMapById(id)
-                ?: return@get call.respond(HttpStatusCode.NotFound, "Map not found")
+            val id = call.parseUuidParameter("id") ?: return@get
+            val map = mapService.getMapById(id) ?: return@get call.respondMapNotFound()
 
             call.respond(map.toResponseDto())
         }
 
         delete("/{id}") {
-            val rawId = call.parameters["id"] ?: error("Route parameter 'id' is required")
-            val id = runCatching { UUID.fromString(rawId) }.getOrNull()
-                ?: return@delete call.respond(HttpStatusCode.BadRequest, "Invalid UUID")
+            val id = call.parseUuidParameter("id") ?: return@delete
 
             val removed = mapService.removeMap(id)
             if (!removed) {
-                return@delete call.respond(HttpStatusCode.NotFound, "Map not found")
+                return@delete call.respondMapNotFound()
             }
 
             call.respond(HttpStatusCode.NoContent)
@@ -43,8 +40,7 @@ fun Route.mapRoutes(
 
         get("/slug/{slug}") {
             val slug = call.parameters["slug"] ?: error("Route parameter 'slug' is required")
-            val map = mapService.getMapBySlug(slug)
-                ?: return@get call.respond(HttpStatusCode.NotFound, "Map not found")
+            val map = mapService.getMapBySlug(slug) ?: return@get call.respondMapNotFound()
 
             call.respond(map.toResponseDto())
         }
@@ -55,14 +51,7 @@ fun Route.mapRoutes(
                 return@post
             }
 
-            val parsedRequest = when (val result = createMapMultipartParser.parse(call)) {
-                is CreateMapMultipartParseResult.Failure -> {
-                    call.respond(result.status, result.message)
-                    return@post
-                }
-
-                is CreateMapMultipartParseResult.Success -> result.value
-            }
+            val parsedRequest = call.parseCreateMapRequest(createMapMultipartParser) ?: return@post
 
             try {
                 val map = mapService.saveMap(parsedRequest.request, parsedRequest.openFileContent())
@@ -82,4 +71,27 @@ fun Route.mapRoutes(
             call.respond(maps.map { it.toResponseDto() })
         }
     }
+}
+
+private suspend fun RoutingCall.parseUuidParameter(name: String): UUID? {
+    val rawValue = parameters[name] ?: error("Route parameter '$name' is required")
+    return runCatching { UUID.fromString(rawValue) }.getOrElse {
+        respond(HttpStatusCode.BadRequest, "Invalid UUID")
+        null
+    }
+}
+
+private suspend fun RoutingCall.parseCreateMapRequest(
+    parser: CreateMapMultipartParser,
+) = when (val result = parser.parse(this)) {
+    is CreateMapMultipartParseResult.Failure -> {
+        respond(result.status, result.message)
+        null
+    }
+
+    is CreateMapMultipartParseResult.Success -> result.value
+}
+
+private suspend fun RoutingCall.respondMapNotFound() {
+    respond(HttpStatusCode.NotFound, "Map not found")
 }
