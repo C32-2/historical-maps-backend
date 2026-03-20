@@ -1,6 +1,6 @@
 package com.vb.maps.api.upload
 
-import com.vb.maps.api.dto.CreateMapRequest
+import com.vb.maps.application.CreateMapCommand
 import io.ktor.http.HttpStatusCode
 import io.ktor.util.cio.readChannel
 import io.ktor.server.routing.RoutingCall
@@ -8,7 +8,7 @@ import io.ktor.utils.io.ByteReadChannel
 import java.io.IOException
 
 data class ParsedCreateMapRequest(
-    val request: CreateMapRequest,
+    val command: CreateMapCommand,
     private val uploadedFile: TemporaryUpload,
 ) {
     fun openFileContent(): ByteReadChannel = uploadedFile.openContent()
@@ -81,7 +81,7 @@ private object CreateMapMultipartPayloadValidator {
 
         return CreateMapMultipartParseResult.Success(
             ParsedCreateMapRequest(
-                request = CreateMapRequest(
+                command = CreateMapCommand(
                     slug = requestSlug,
                     title = requestTitle,
                     description = payload.description,

@@ -105,7 +105,7 @@ class MapServiceTest {
         assertFailsWith<IllegalStateException> {
             kotlinx.coroutines.runBlocking {
                 service.saveMap(
-                    mapDto = com.vb.maps.api.dto.CreateMapRequest(
+                    command = CreateMapCommand(
                         slug = "new-map",
                         title = "New map",
                         description = "Description",

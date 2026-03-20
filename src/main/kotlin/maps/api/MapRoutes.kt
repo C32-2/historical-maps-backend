@@ -6,6 +6,8 @@ import com.vb.maps.api.upload.CreateMapMultipartParser
 import com.vb.maps.application.MapService
 import com.vb.plugins.UploadRateLimiter
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.plugins.origin
 import io.ktor.server.response.respond
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.Route
@@ -18,6 +20,7 @@ import java.util.UUID
 fun Route.mapRoutes(
     mapService: MapService,
     createMapMultipartParser: CreateMapMultipartParser = CreateMapMultipartParser(),
+    uploadRateLimiter: UploadRateLimiter,
 ) {
     route("/maps") {
         get("/{id}") {
@@ -46,7 +49,7 @@ fun Route.mapRoutes(
         }
 
         post {
-            if (!UploadRateLimiter.isAllowed(call)) {
+            if (!uploadRateLimiter.isAllowed(call.clientIpAddress())) {
                 call.respond(HttpStatusCode.TooManyRequests, "Too many upload attempts. Try again later.")
                 return@post
             }
@@ -54,7 +57,7 @@ fun Route.mapRoutes(
             val parsedRequest = call.parseCreateMapRequest(createMapMultipartParser) ?: return@post
 
             try {
-                val map = mapService.saveMap(parsedRequest.request, parsedRequest.openFileContent())
+                val map = mapService.saveMap(parsedRequest.command, parsedRequest.openFileContent())
                 call.respond(HttpStatusCode.Created, map.toResponseDto())
             } finally {
                 parsedRequest.cleanup()
@@ -95,3 +98,10 @@ private suspend fun RoutingCall.parseCreateMapRequest(
 private suspend fun RoutingCall.respondMapNotFound() {
     respond(HttpStatusCode.NotFound, "Map not found")
 }
+
+private fun ApplicationCall.clientIpAddress(): String =
+    request.headers["X-Forwarded-For"]
+        ?.substringBefore(',')
+        ?.trim()
+        ?.takeIf(String::isNotBlank)
+        ?: request.origin.remoteHost

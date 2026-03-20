@@ -9,10 +9,14 @@ import io.ktor.server.routing.routing
 
 fun Application.configureRouting(
     mapRepository: MapRepository,
-    mapStorage: MapStorage
+    mapStorage: MapStorage,
+    uploadRateLimiter: UploadRateLimiter,
 ) {
     val mapService = MapService(mapRepository, mapStorage)
     routing {
-        mapRoutes(mapService)
+        mapRoutes(
+            mapService = mapService,
+            uploadRateLimiter = uploadRateLimiter,
+        )
     }
 }

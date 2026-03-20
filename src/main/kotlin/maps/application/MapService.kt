@@ -1,6 +1,5 @@
 package com.vb.maps.application
 
-import com.vb.maps.api.dto.CreateMapRequest
 import com.vb.maps.domain.Map
 import com.vb.maps.domain.MapRepository
 import io.ktor.utils.io.ByteReadChannel
@@ -15,8 +14,8 @@ class MapService(
     fun getMapBySlug(slug: String): Map? = repository.getBySlug(slug)
     fun findByTitle(query: String): List<Map> = repository.findByTitle(query)
 
-    suspend fun saveMap(mapDto: CreateMapRequest, fileContent: ByteReadChannel): Map {
-        val draftMap = createMap(mapDto)
+    suspend fun saveMap(command: CreateMapCommand, fileContent: ByteReadChannel): Map {
+        val draftMap = createMap(command)
         var persistedStorageKey: String? = null
 
         return try {
@@ -30,16 +29,16 @@ class MapService(
         }
     }
 
-    private fun createMap(mapDto: CreateMapRequest): Map {
+    private fun createMap(command: CreateMapCommand): Map {
         val id = UUID.randomUUID()
         val timestamp = Instant.now()
         return Map(
             id = id,
-            slug = mapDto.slug,
-            description = mapDto.description,
+            slug = command.slug,
+            description = command.description,
             createdAt = timestamp,
             updatedAt = timestamp,
-            title = mapDto.title,
+            title = command.title,
             storageKey = "maps/$id/tiles.pmtiles"
         )
     }

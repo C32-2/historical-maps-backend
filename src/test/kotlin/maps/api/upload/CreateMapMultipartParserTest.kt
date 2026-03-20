@@ -161,7 +161,7 @@ class CreateMapMultipartParserTest {
 
                         is CreateMapMultipartParseResult.Success -> {
                             try {
-                                call.respond("OK:${result.value.request.slug}:${result.value.request.title}")
+                                call.respond("OK:${result.value.command.slug}:${result.value.command.title}")
                             } finally {
                                 result.value.cleanup()
                             }

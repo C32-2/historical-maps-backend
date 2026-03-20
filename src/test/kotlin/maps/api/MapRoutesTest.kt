@@ -4,7 +4,7 @@ import com.vb.module
 import com.vb.maps.application.MapStorage
 import com.vb.maps.domain.Map
 import com.vb.maps.domain.MapRepository
-import com.vb.plugins.resetUploadRateLimitBucketsForTests
+import com.vb.plugins.InMemoryUploadRateLimiter
 import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
@@ -28,10 +28,11 @@ import java.time.Instant
 import java.util.UUID
 
 class MapRoutesTest {
+    private val uploadRateLimiter = InMemoryUploadRateLimiter()
 
     @BeforeTest
     fun resetState() {
-        resetUploadRateLimitBucketsForTests()
+        uploadRateLimiter.reset()
         storedMaps.clear()
         storedMaps.add(testMap)
         savedFiles.clear()
@@ -206,7 +207,7 @@ class MapRoutesTest {
         }
 
         application {
-            module(fakeRepository, fakeStorage)
+            module(fakeRepository, fakeStorage, uploadRateLimiter)
         }
 
         test()

@@ -1,6 +1,6 @@
-package com.vb.maps.api.dto
+package com.vb.maps.application
 
-data class CreateMapRequest(
+data class CreateMapCommand(
     val slug: String,
     val title: String,
     val description: String?,
