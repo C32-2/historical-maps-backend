@@ -12,7 +12,7 @@ class ExposedMapRepository : MapRepository {
     override fun getById(id: UUID): Map? = transaction {
         MapTable
             .selectAll()
-            .andWhere { MapTable.id eq id }
+            .where { MapTable.id eq id }
             .limit(1)
             .firstOrNull()
             ?.let(::toDomain)

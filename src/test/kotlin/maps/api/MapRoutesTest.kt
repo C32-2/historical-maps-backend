@@ -14,6 +14,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.Headers
 import io.ktor.client.request.forms.formData
 import io.ktor.server.config.MapApplicationConfig
+import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toInputStream
@@ -79,44 +80,14 @@ class MapRoutesTest {
     }
 
     @Test
-    fun returnsBadRequestForInvalidMapId() = testApplication {
-        environment {
-            config = MapApplicationConfig(
-                "db.enabled" to "false",
-                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
-                "db.user" to "test",
-                "db.password" to "test",
-                "db.driverClassName" to "org.postgresql.Driver",
-                "db.flyway.enabled" to "false",
-            )
-        }
-
-        application {
-            module(fakeRepository, fakeStorage)
-        }
-
+    fun returnsBadRequestForInvalidMapId() = withTestMapsApplication {
         client.get("/maps/not-a-uuid").apply {
             assertEquals(HttpStatusCode.BadRequest, status)
         }
     }
 
     @Test
-    fun returnsMapBySlugWithoutDatabase() = testApplication {
-        environment {
-            config = MapApplicationConfig(
-                "db.enabled" to "false",
-                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
-                "db.user" to "test",
-                "db.password" to "test",
-                "db.driverClassName" to "org.postgresql.Driver",
-                "db.flyway.enabled" to "false",
-            )
-        }
-
-        application {
-            module(fakeRepository, fakeStorage)
-        }
-
+    fun returnsMapBySlugWithoutDatabase() = withTestMapsApplication {
         client.get("/maps/slug/test-map").apply {
             assertEquals(HttpStatusCode.OK, status)
             assertNotNull(body<String>().takeIf { it.contains("test-map") })
@@ -124,22 +95,7 @@ class MapRoutesTest {
     }
 
     @Test
-    fun deletesMapById() = testApplication {
-        environment {
-            config = MapApplicationConfig(
-                "db.enabled" to "false",
-                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
-                "db.user" to "test",
-                "db.password" to "test",
-                "db.driverClassName" to "org.postgresql.Driver",
-                "db.flyway.enabled" to "false",
-            )
-        }
-
-        application {
-            module(fakeRepository, fakeStorage)
-        }
-
+    fun deletesMapById() = withTestMapsApplication {
         client.delete("/maps/${testMap.id}").apply {
             assertEquals(HttpStatusCode.NoContent, status)
             assertEquals(emptyList(), storedMaps)
@@ -148,22 +104,7 @@ class MapRoutesTest {
     }
 
     @Test
-    fun returnsNotFoundWhenDeletingMissingMap() = testApplication {
-        environment {
-            config = MapApplicationConfig(
-                "db.enabled" to "false",
-                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
-                "db.user" to "test",
-                "db.password" to "test",
-                "db.driverClassName" to "org.postgresql.Driver",
-                "db.flyway.enabled" to "false",
-            )
-        }
-
-        application {
-            module(fakeRepository, fakeStorage)
-        }
-
+    fun returnsNotFoundWhenDeletingMissingMap() = withTestMapsApplication {
         client.delete("/maps/22222222-2222-2222-2222-222222222222").apply {
             assertEquals(HttpStatusCode.NotFound, status)
             assertEquals("Map not found", body<String>())
@@ -173,23 +114,7 @@ class MapRoutesTest {
     }
 
     @Test
-    fun createsMapAndStoresPmtilesByUuidKey() = testApplication {
-        environment {
-            config = MapApplicationConfig(
-                "db.enabled" to "false",
-                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
-                "db.user" to "test",
-                "db.password" to "test",
-                "db.driverClassName" to "org.postgresql.Driver",
-                "db.flyway.enabled" to "false",
-                "storage.baseDir" to "build/test-storage",
-            )
-        }
-
-        application {
-            module(fakeRepository, fakeStorage)
-        }
-
+    fun createsMapAndStoresPmtilesByUuidKey() = withTestMapsApplication {
         client.submitFormWithBinaryData(
             url = "/maps",
             formData = formData {
@@ -218,23 +143,7 @@ class MapRoutesTest {
     }
 
     @Test
-    fun rejectsFileWithPmtilesExtensionButInvalidContent() = testApplication {
-        environment {
-            config = MapApplicationConfig(
-                "db.enabled" to "false",
-                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
-                "db.user" to "test",
-                "db.password" to "test",
-                "db.driverClassName" to "org.postgresql.Driver",
-                "db.flyway.enabled" to "false",
-                "storage.baseDir" to "build/test-storage",
-            )
-        }
-
-        application {
-            module(fakeRepository, fakeStorage)
-        }
-
+    fun rejectsFileWithPmtilesExtensionButInvalidContent() = withTestMapsApplication {
         client.submitFormWithBinaryData(
             url = "/maps",
             formData = formData {
@@ -258,71 +167,7 @@ class MapRoutesTest {
     }
 
     @Test
-    fun rejectsRequestWithMultiplePmtilesFiles() = testApplication {
-        environment {
-            config = MapApplicationConfig(
-                "db.enabled" to "false",
-                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
-                "db.user" to "test",
-                "db.password" to "test",
-                "db.driverClassName" to "org.postgresql.Driver",
-                "db.flyway.enabled" to "false",
-                "storage.baseDir" to "build/test-storage",
-            )
-        }
-
-        application {
-            module(fakeRepository, fakeStorage)
-        }
-
-        client.submitFormWithBinaryData(
-            url = "/maps",
-            formData = formData {
-                append("slug", "new-map")
-                append("title", "New map")
-                append(
-                    key = "pmtiles",
-                    value = validPmtilesBytes(),
-                    headers = Headers.build {
-                        append("Content-Disposition", "filename=\"tiles.pmtiles\"")
-                        append("Content-Type", ContentType.Application.OctetStream.toString())
-                    }
-                )
-                append(
-                    key = "file",
-                    value = validPmtilesBytes(),
-                    headers = Headers.build {
-                        append("Content-Disposition", "filename=\"tiles.pmtiles\"")
-                        append("Content-Type", ContentType.Application.OctetStream.toString())
-                    }
-                )
-            }
-        ).apply {
-            assertEquals(HttpStatusCode.BadRequest, status)
-            assertEquals("Exactly one pmtiles file must be uploaded", body<String>())
-            assertEquals(1, storedMaps.size)
-            assertEquals(0, savedFiles.size)
-        }
-    }
-
-    @Test
-    fun rateLimitsRepeatedUploadsFromSameClientIp() = testApplication {
-        environment {
-            config = MapApplicationConfig(
-                "db.enabled" to "false",
-                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
-                "db.user" to "test",
-                "db.password" to "test",
-                "db.driverClassName" to "org.postgresql.Driver",
-                "db.flyway.enabled" to "false",
-                "storage.baseDir" to "build/test-storage",
-            )
-        }
-
-        application {
-            module(fakeRepository, fakeStorage)
-        }
-
+    fun rateLimitsRepeatedUploadsFromSameClientIp() = withTestMapsApplication {
         repeat(5) { index ->
             client.submitFormWithBinaryData(
                 url = "/maps",
@@ -346,15 +191,39 @@ class MapRoutesTest {
             assertEquals("Too many upload attempts. Try again later.", body<String>())
         }
     }
+
+    private fun withTestMapsApplication(test: suspend ApplicationTestBuilder.() -> Unit) = testApplication {
+        environment {
+            config = MapApplicationConfig(
+                "db.enabled" to "false",
+                "db.jdbcUrl" to "jdbc:postgresql://localhost:5432/test",
+                "db.user" to "test",
+                "db.password" to "test",
+                "db.driverClassName" to "org.postgresql.Driver",
+                "db.flyway.enabled" to "false",
+                "storage.baseDir" to "build/test-storage",
+            )
+        }
+
+        application {
+            module(fakeRepository, fakeStorage)
+        }
+
+        test()
+    }
 }
 
 private fun createValidUploadFormData(slug: String, title: String) = formData {
     append("slug", slug)
     append("title", title)
     append("description", "Uploaded map")
+    appendPmtilesFile(validPmtilesBytes())
+}
+
+private fun io.ktor.client.request.forms.FormBuilder.appendPmtilesFile(bytes: ByteArray) {
     append(
         key = "pmtiles",
-        value = validPmtilesBytes(),
+        value = bytes,
         headers = Headers.build {
             append("Content-Disposition", "filename=\"tiles.pmtiles\"")
             append("Content-Type", ContentType.Application.OctetStream.toString())
