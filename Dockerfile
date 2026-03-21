@@ -1,4 +1,4 @@
-FROM eclipse-temurin:24-jdk AS builder
+FROM eclipse-temurin:21-jdk AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY src src
 
 RUN chmod +x gradlew && ./gradlew --no-daemon installDist
 
-FROM eclipse-temurin:24-jre
+FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
