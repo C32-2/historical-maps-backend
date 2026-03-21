@@ -41,9 +41,6 @@ out/
 ### .env ###
 .env
 
-### properties ###
-gradle.properties
-
 ### Postgres ###
 postgres-data/
 
