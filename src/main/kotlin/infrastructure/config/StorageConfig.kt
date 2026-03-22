@@ -15,7 +15,6 @@ fun ApplicationConfig.toStorageSettings(): StorageSettings {
             storageConfig.stringSetting(
                 path = "baseDir",
                 envName = "BASE_MAP_DIRECTORY",
-                default = "/app/data",
             )
         ),
     )

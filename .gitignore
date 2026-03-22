@@ -40,6 +40,8 @@ out/
 
 ### .env ###
 .env
+.env.local
+.env.prod
 
 ### Postgres ###
 postgres-data/
@@ -48,3 +50,4 @@ postgres-data/
 
 ### Maps ###
 data-storage/
+runtime/

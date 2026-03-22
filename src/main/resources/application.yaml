@@ -2,18 +2,3 @@ ktor:
   application:
     modules:
       - com.vb.ApplicationKt.module
-  deployment:
-    port: 8080
-
-db:
-  enabled: true
-  jdbcUrl: jdbc:postgresql://localhost:5432/map_db
-  user: user
-  password: password
-  driverClassName: org.postgresql.Driver
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
-
-storage:
-  baseDir: /app/data

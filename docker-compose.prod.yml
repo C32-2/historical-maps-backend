@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ${RUNTIME_DIR}/postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_ENABLED: ${DB_ENABLED}
+      DB_JDBC_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_DRIVER_CLASS_NAME: ${DB_DRIVER_CLASS_NAME}
+      DB_FLYWAY_ENABLED: ${DB_FLYWAY_ENABLED}
+      DB_FLYWAY_LOCATIONS: ${DB_FLYWAY_LOCATIONS}
+      BASE_MAP_DIRECTORY: ${BASE_MAP_DIRECTORY}
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${RUNTIME_DIR}/storage:${BASE_MAP_DIRECTORY}
