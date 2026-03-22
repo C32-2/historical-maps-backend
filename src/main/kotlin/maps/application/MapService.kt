@@ -39,9 +39,11 @@ class MapService(
             createdAt = timestamp,
             updatedAt = timestamp,
             title = command.title,
-            storageKey = "maps/$id/tiles.pmtiles"
+            storageKey = buildStorageKey(command.slug)
         )
     }
+
+    private fun buildStorageKey(slug: String): String = "maps/$slug.pmtiles"
 
     fun removeMap(id: UUID): Boolean {
         val map = repository.getById(id) ?: return false

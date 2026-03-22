@@ -21,7 +21,7 @@ class MapServiceTest {
         description = "Description",
         createdAt = Instant.parse("2026-01-01T10:00:00Z"),
         updatedAt = Instant.parse("2026-01-02T10:00:00Z"),
-        storageKey = "maps/11111111-1111-1111-1111-111111111111/tiles.pmtiles",
+        storageKey = "maps/test-map.pmtiles",
     )
 
     private val secondMap = Map(
@@ -31,7 +31,7 @@ class MapServiceTest {
         description = "Description",
         createdAt = Instant.parse("2026-01-03T10:00:00Z"),
         updatedAt = Instant.parse("2026-01-04T10:00:00Z"),
-        storageKey = "maps/22222222-2222-2222-2222-222222222222/tiles.pmtiles",
+        storageKey = "maps/another-map.pmtiles",
     )
 
     private val repository = object : MapRepository {
@@ -116,6 +116,7 @@ class MapServiceTest {
         }
 
         assertEquals(1, deletedStorageKeys.size)
+        assertEquals("maps/new-map.pmtiles", deletedStorageKeys.single())
     }
 
     @Test

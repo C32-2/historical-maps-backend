@@ -47,7 +47,7 @@ class MapRoutesTest {
         description = "Description",
         createdAt = Instant.parse("2026-01-01T10:00:00Z"),
         updatedAt = Instant.parse("2026-01-02T10:00:00Z"),
-        storageKey = "maps/11111111-1111-1111-1111-111111111111/tiles.pmtiles",
+        storageKey = "maps/test-map.pmtiles",
     )
 
     private val storedMaps = mutableListOf(testMap)
@@ -120,7 +120,7 @@ class MapRoutesTest {
     }
 
     @Test
-    fun createsMapAndStoresPmtilesByUuidKey() = withTestMapsApplication {
+    fun createsMapAndStoresPmtilesBySlugKey() = withTestMapsApplication {
         client.submitFormWithBinaryData(
             url = "/maps",
             formData = formData {
@@ -146,7 +146,7 @@ class MapRoutesTest {
             assertEquals(2, storedMaps.size)
             assertEquals(1, savedFiles.size)
             val storedKey = savedFiles.keys.single()
-            assertNotNull(Regex("""^maps/[0-9a-f\-]{36}/tiles\.pmtiles$""").matchEntire(storedKey))
+            assertEquals("maps/new-map.pmtiles", storedKey)
             assertEquals(validPmtilesBytes().toList(), savedFiles[storedKey]?.toList())
         }
     }
