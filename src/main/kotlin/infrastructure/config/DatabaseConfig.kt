@@ -28,10 +28,8 @@ internal fun ApplicationConfig.booleanSetting(path: String, envName: String? = n
 }
 
 fun ApplicationConfig.toDatabaseSettings(): DatabaseSettings {
-    val dbConfig = config("db")
-    val flywayConfig = dbConfig.config("flyway")
-    val flywayLocations = flywayConfig.stringSetting(
-        path = "locations",
+    val flywayLocations = stringSetting(
+        path = "db.flyway.locations",
         envName = "DB_FLYWAY_LOCATIONS",
         default = "classpath:db/migration",
     )
@@ -40,12 +38,12 @@ fun ApplicationConfig.toDatabaseSettings(): DatabaseSettings {
         .filter(String::isNotEmpty)
 
     return DatabaseSettings(
-        enabled = dbConfig.booleanSetting("enabled", "DB_ENABLED", default = true),
-        jdbcUrl = dbConfig.stringSetting("jdbcUrl", "DB_JDBC_URL"),
-        user = dbConfig.stringSetting("user", "DB_USER"),
-        password = dbConfig.stringSetting("password", "DB_PASSWORD"),
-        driverClassName = dbConfig.stringSetting("driverClassName", "DB_DRIVER_CLASS_NAME"),
-        runMigrations = flywayConfig.booleanSetting("enabled", "DB_FLYWAY_ENABLED", default = true),
+        enabled = booleanSetting("db.enabled", "DB_ENABLED", default = true),
+        jdbcUrl = stringSetting("db.jdbcUrl", "DB_JDBC_URL"),
+        user = stringSetting("db.user", "DB_USER"),
+        password = stringSetting("db.password", "DB_PASSWORD"),
+        driverClassName = stringSetting("db.driverClassName", "DB_DRIVER_CLASS_NAME"),
+        runMigrations = booleanSetting("db.flyway.enabled", "DB_FLYWAY_ENABLED", default = true),
         flywayLocations = flywayLocations,
     )
 }

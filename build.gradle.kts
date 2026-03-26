@@ -9,7 +9,7 @@ group = "com.vb"
 version = "0.0.1"
 
 application {
-    mainClass = "io.ktor.server.netty.EngineMain"
+    mainClass = "com.vb.ApplicationKt"
 }
 
 kotlin {
@@ -29,7 +29,6 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages")
     implementation("io.ktor:ktor-server-request-validation")
     implementation("io.ktor:ktor-server-netty")
-    implementation("io.ktor:ktor-server-config-yaml")
     implementation("ch.qos.logback:logback-classic:1.5.18")
 
     implementation("org.postgresql:postgresql:42.7.7")

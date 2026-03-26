@@ -1,4 +1,0 @@
-ktor:
-  application:
-    modules:
-      - com.vb.ApplicationKt.module

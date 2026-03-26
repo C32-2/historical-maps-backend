@@ -2,12 +2,10 @@
 
 This project uses environment variables as the runtime source of truth for the application.
 
-There are still two layers to understand:
+There are two layers to understand:
 
 1. `docker-compose.local.yml` / `docker-compose.prod.yml` configure containers, ports, and volume mounts.
-2. The application reads its own runtime settings from environment variables.
-
-`src/main/resources/application.yaml` remains only as minimal Ktor bootstrap config for module wiring.
+2. The application reads its runtime settings directly from environment variables.
 
 ## Host And Container Paths
 
@@ -51,6 +49,8 @@ Example host path:
 - `DB_FLYWAY_LOCATIONS`: comma-separated Flyway locations
 - `BASE_MAP_DIRECTORY`: storage root inside the application container
 - `ADMIN_TOKEN`: admin token required for protected endpoints
+- `HOST`: bind host for the HTTP server, default `0.0.0.0`
+- `PORT`: bind port for the HTTP server, default `8080`
 
 ## Source Of Truth
 
@@ -58,4 +58,4 @@ Use this rule when reasoning about configuration:
 
 - `docker-compose.local.yml` and `docker-compose.prod.yml` are the source of truth for container wiring and mounted directories.
 - `.env.local` and production env values are the source of truth for runtime settings.
-- `src/main/resources/application.yaml` is not used for database, storage, or admin-token runtime values.
+- The application has no runtime `application.yaml`; bootstrap and settings both come from environment variables.

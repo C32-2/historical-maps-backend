@@ -8,12 +8,10 @@ data class StorageSettings(
 )
 
 fun ApplicationConfig.toStorageSettings(): StorageSettings {
-    val storageConfig = config("storage")
-
     return StorageSettings(
         baseDir = File(
-            storageConfig.stringSetting(
-                path = "baseDir",
+            stringSetting(
+                path = "storage.baseDir",
                 envName = "BASE_MAP_DIRECTORY",
             )
         ),
