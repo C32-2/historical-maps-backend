@@ -87,13 +87,6 @@ paths:
                   value: Missing pmtiles file
                 invalidArchive:
                   value: Uploaded file is not a valid PMTiles archive
-        "413":
-          description: Upload is too large
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: Uploaded file is too large. Maximum allowed size is 100 MB.
         "429":
           description: Upload rate limit exceeded
           content:

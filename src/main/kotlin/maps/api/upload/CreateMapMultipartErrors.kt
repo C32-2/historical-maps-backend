@@ -3,7 +3,6 @@ package com.vb.maps.api.upload
 import io.ktor.http.HttpStatusCode
 
 sealed interface CreateMapMultipartError {
-    data object PayloadTooLarge : CreateMapMultipartError
     data object MissingSlugOrTitle : CreateMapMultipartError
     data object DuplicateFields : CreateMapMultipartError
     data object InvalidFileCount : CreateMapMultipartError
@@ -16,7 +15,6 @@ sealed interface CreateMapMultipartError {
 
 val CreateMapMultipartError.status: HttpStatusCode
     get() = when (this) {
-        CreateMapMultipartError.PayloadTooLarge -> HttpStatusCode.PayloadTooLarge
         CreateMapMultipartError.MissingSlugOrTitle,
         CreateMapMultipartError.DuplicateFields,
         CreateMapMultipartError.InvalidFileCount,
@@ -30,7 +28,6 @@ val CreateMapMultipartError.status: HttpStatusCode
 
 val CreateMapMultipartError.message: String
     get() = when (this) {
-        CreateMapMultipartError.PayloadTooLarge -> "Uploaded file is too large. Maximum allowed size is 100 MB."
         CreateMapMultipartError.MissingSlugOrTitle -> "Missing slug or title"
         CreateMapMultipartError.DuplicateFields -> "Duplicate multipart fields are not allowed"
         CreateMapMultipartError.InvalidFileCount -> "Exactly one pmtiles file must be uploaded"

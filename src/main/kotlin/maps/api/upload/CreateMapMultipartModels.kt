@@ -1,6 +1,5 @@
 package com.vb.maps.api.upload
 
-internal const val MAX_MULTIPART_SIZE_BYTES = 100L * 1024 * 1024
 internal const val MAX_SLUG_LENGTH = 60
 internal const val MAX_TITLE_LENGTH = 100
 internal const val MAX_DESCRIPTION_LENGTH = 250

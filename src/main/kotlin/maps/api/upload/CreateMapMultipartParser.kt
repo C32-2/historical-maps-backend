@@ -4,7 +4,6 @@ import com.vb.maps.application.CreateMapCommand
 import io.ktor.util.cio.readChannel
 import io.ktor.server.routing.RoutingCall
 import io.ktor.utils.io.ByteReadChannel
-import java.io.IOException
 
 data class ParsedCreateMapRequest(
     val command: CreateMapCommand,
@@ -23,21 +22,10 @@ class CreateMapMultipartParser {
     private val reader = CreateMapMultipartReader()
 
     suspend fun parse(call: RoutingCall): CreateMapMultipartParseResult {
-        var payload: CreateMapMultipartPayload? = null
-
-        return try {
-            payload = reader.read(call)
-            CreateMapMultipartPayloadValidator.validate(payload).also { result ->
-                if (result is CreateMapMultipartParseResult.Failure) {
-                    payload.cleanup()
-                }
-            }
-        } catch (exception: IOException) {
-            payload?.cleanup()
-            if (exception.message?.contains("Limit of", ignoreCase = true) == true) {
-                failure(CreateMapMultipartError.PayloadTooLarge)
-            } else {
-                throw exception
+        val payload = reader.read(call)
+        return CreateMapMultipartPayloadValidator.validate(payload).also { result ->
+            if (result is CreateMapMultipartParseResult.Failure) {
+                payload.cleanup()
             }
         }
     }
