@@ -10,7 +10,7 @@ import io.ktor.utils.io.copyAndClose
 internal class CreateMapMultipartReader {
     suspend fun read(call: RoutingCall): CreateMapMultipartPayload {
         val accumulator = CreateMapMultipartAccumulator()
-        val multipart = call.receiveMultipart()
+        val multipart = call.receiveMultipart(formFieldLimit = MULTIPART_PARSER_LIMIT_BYTES)
         var part = multipart.readPart()
 
         while (part != null) {
