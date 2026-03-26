@@ -20,11 +20,11 @@ With the current compose setup:
 
 The application container mounts `${RUNTIME_DIR}/storage` to `${BASE_MAP_DIRECTORY}` and uses:
 
-- `BASE_MAP_DIRECTORY=/app/data`
+- `BASE_MAP_DIRECTORY=/storage`
 
 Map uploads are then saved as:
 
-- `/app/data/maps/{slug}.pmtiles` inside the container
+- `/storage/maps/{slug}.pmtiles` inside the container
 - `${RUNTIME_DIR}/storage/maps/{slug}.pmtiles` on the host
 
 Example host path:
