@@ -1,4 +1,4 @@
-rootProject.name = "historical-maps-backend"
+rootProject.name = "kartograf-backend"
 
 dependencyResolutionManagement {
     repositories {

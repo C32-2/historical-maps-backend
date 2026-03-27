@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Historical Maps Backend API
+  title: Kartograf Backend API
   version: 0.0.1
   description: API for managing historical map metadata and PMTiles uploads.
 

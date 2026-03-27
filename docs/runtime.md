@@ -27,7 +27,7 @@ Map uploads are then saved as:
 
 Example host path:
 
-- `/opt/historical-maps-backend/runtime/storage/maps/test-map.pmtiles`
+- `/opt/kartograf-backend/runtime/storage/maps/test-map.pmtiles`
 
 ## Environment Variables
 

@@ -16,8 +16,8 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-COPY --from=builder /app/build/install/historical-maps-backend /app/
+COPY --from=builder /app/build/install/kartograf-backend /app/
 
 EXPOSE 8080
 
-CMD ["/app/bin/historical-maps-backend"]
+CMD ["/app/bin/kartograf-backend"]
