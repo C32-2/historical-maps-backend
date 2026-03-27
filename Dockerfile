@@ -12,7 +12,7 @@ COPY src src
 
 RUN chmod +x gradlew && ./gradlew --no-daemon installDist
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
