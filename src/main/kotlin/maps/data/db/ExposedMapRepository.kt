@@ -37,6 +37,7 @@ class ExposedMapRepository : MapRepository {
     override fun getAll(): List<Map> = transaction {
         MapTable
             .selectAll()
+            .orderBy(MapTable.title to SortOrder.DESC)
             .map { toDomain(it) }
     }
 

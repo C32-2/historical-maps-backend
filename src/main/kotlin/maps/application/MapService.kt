@@ -62,4 +62,6 @@ class MapService(
 
         return true
     }
+
+    fun getAll(): List<Map> = repository.getAll()
 }

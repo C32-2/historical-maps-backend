@@ -24,6 +24,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import java.time.Instant
 import java.util.UUID
 
@@ -48,6 +49,16 @@ class MapRoutesTest {
         createdAt = Instant.parse("2026-01-01T10:00:00Z"),
         updatedAt = Instant.parse("2026-01-02T10:00:00Z"),
         storageKey = "maps/test-map.pmtiles",
+    )
+
+    private val secondMap = Map(
+        id = UUID.fromString("33333333-3333-3333-3333-333333333333"),
+        slug = "old-town-plan",
+        title = "Old Town Plan",
+        description = "Historic city plan",
+        createdAt = Instant.parse("2026-01-03T10:00:00Z"),
+        updatedAt = Instant.parse("2026-01-04T10:00:00Z"),
+        storageKey = "maps/old-town-plan.pmtiles",
     )
 
     private val storedMaps = mutableListOf(testMap)
@@ -93,6 +104,30 @@ class MapRoutesTest {
         client.get("/maps/slug/test-map").apply {
             assertEquals(HttpStatusCode.OK, status)
             assertNotNull(body<String>().takeIf { it.contains("test-map") })
+        }
+    }
+
+    @Test
+    fun returnsAllMapsWhenTitleFilterIsMissing() = withTestMapsApplication {
+        storedMaps.add(secondMap)
+
+        client.get("/maps").apply {
+            assertEquals(HttpStatusCode.OK, status)
+            val responseBody = body<String>()
+            assertTrue(responseBody.contains("\"slug\":\"test-map\""))
+            assertTrue(responseBody.contains("\"slug\":\"old-town-plan\""))
+        }
+    }
+
+    @Test
+    fun filtersMapsByTitleQuery() = withTestMapsApplication {
+        storedMaps.add(secondMap)
+
+        client.get("/maps?title=old").apply {
+            assertEquals(HttpStatusCode.OK, status)
+            val responseBody = body<String>()
+            assertTrue(responseBody.contains("\"slug\":\"old-town-plan\""))
+            assertTrue(!responseBody.contains("\"slug\":\"test-map\""))
         }
     }
 

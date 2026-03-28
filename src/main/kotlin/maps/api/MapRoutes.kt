@@ -22,7 +22,6 @@ import java.util.UUID
 
 private const val MAP_NOT_FOUND_MESSAGE = "Map not found"
 private const val INVALID_UUID_MESSAGE = "Invalid UUID"
-private const val MISSING_TITLE_QUERY_PARAMETER_MESSAGE = "Missing title query parameter"
 private const val TOO_MANY_UPLOAD_ATTEMPTS_MESSAGE = "Too many upload attempts. Try again later."
 private const val INVALID_ADMIN_TOKEN_MESSAGE = "Invalid admin token"
 
@@ -79,11 +78,15 @@ fun Route.mapRoutes(
         }
 
         get {
-            val title = call.request.queryParameters["title"]?.trim()
+            val title = call.request.queryParameters["title"]
+                ?.trim()
                 ?.takeIf(String::isNotEmpty)
-                ?: return@get call.respond(HttpStatusCode.BadRequest, MISSING_TITLE_QUERY_PARAMETER_MESSAGE)
 
-            val maps = mapService.findByTitle(title)
+            val maps = if (title != null) {
+                mapService.findByTitle(title)
+            } else {
+                mapService.getAll()
+            }
 
             call.respond(maps.map { it.toResponseDto() })
         }
